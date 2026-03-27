@@ -86,3 +86,7 @@
 - 12: Scalability and Portability
   - 12.1: The backend and AI inference components must be capable of independent scaling to handle increased user demand.
   - 12.2: The application must be accessible via standard web browsers across various devices without requiring local installation.
+
+
+
+Google Gemini was used in the development of these requirements as a form of checking and revising my work. All AI-edited content was thoroughly checked.
