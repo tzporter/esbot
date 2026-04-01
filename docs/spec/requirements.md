@@ -38,7 +38,7 @@
 - 3: Quiz and Practice Generation
     - 3.1: Users must be able to trigger quiz and practice generation reliably and only when intended
     - 3.2: Quiz questions must meet all requirements outlined in section 2 
-    - 3.6: New problems should be generated dynamically, based on the user's performance
+    - 3.3: New problems should be generated dynamically, based on the user's performance
     
 - 4: Answer Evaluation
     - 4.1: Feedback must be provided when answers are given
@@ -48,10 +48,10 @@
 - 5: Session Management
     - 5.1: All interactions between the user and chatbot must be stored
     - 5.2: Storage must be persisent
-    - 5.2: Interactions must be fetched when user signs in
-    - 5.3: Interactions must be presented in chronological order
-    - 5.4: Interactions must be stored in such a fashion that requirements in section 1 are able to be met
-    - 5.5: Interactions be secure, and not leaked between users
+    - 5.3: Interactions must be fetched when user signs in
+    - 5.4: Interactions must be presented in chronological order
+    - 5.5: Interactions must be stored in such a fashion that requirements in section 1 are able to be met
+    - 5.6: Interactions be secure, and not leaked between users
     
 - 6: Backend API Access
     - 6.1: The Backend layer must run independently of the front end
@@ -86,7 +86,7 @@
   - 12.1: The backend and AI inference components must be capable of independent scaling to handle increased user demand.
   - 12.2: The application must be accessible via standard web browsers across various devices without requiring local installation.
 
-- 13: Functional Sustainibility
+- 13: Functional Suitability
   - 13.1: The system must manage the non-deterministic nature of AI outputs by validating responses before presentation where possible.
 
 
