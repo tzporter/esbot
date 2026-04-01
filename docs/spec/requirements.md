@@ -3,7 +3,7 @@
 ## Application Domain:
 - People and Organizations: HE Students, Professors and Staff
 - Existing Systems and Hardware: HE campuses, PC-Pools, Course Software and Content (e.g. Moodle), Large Language Models
-- Processes: learn knew knowldedge; test, evaluate and refine understanding; provide examples; provide clarification; track learning progress
+- Processes: learn new knowledge; test, evaluate and refine understanding; provide examples; provide clarification; track learning progress
 - Concepts: Learning Session, Educational Content, Quiz
 
 ## Problem Space:
@@ -57,7 +57,7 @@
     - 6.1: The Backend layer must run independently of the front end
     - 6.2: The Backend must meet the requirements outlined by the REST architectural style
  
-## Non-Functional Requirements (Based on `docs/esbot.md`)
+## Non-Functional Requirements (Based on `docs/esbot.md`, and Lab Slide-1)
 - 7: Usability
   - 7.1: The system shall provide an intuitive user interface accessible to first-time users without prior training.
   - 7.2: The user interface shall enable pleasing and satisfying interaction to encourage active engagement.
@@ -71,7 +71,6 @@
 - 9: Reliability
   - 9.1: The system shall handle failures of external AI services gracefully.
   - 9.2: In the event of an AI service interruption, the system must provide meaningful fallback responses instead of system errors.
-  - 9.3: The system must manage the non-deterministic nature of AI outputs by validating responses before presentation where possible.
 
 - 10: Security
   - 10.1: The system shall protect all stored session data and user interaction history.
@@ -86,6 +85,9 @@
 - 12: Scalability and Portability
   - 12.1: The backend and AI inference components must be capable of independent scaling to handle increased user demand.
   - 12.2: The application must be accessible via standard web browsers across various devices without requiring local installation.
+
+-13: Functional Sustainibility
+  - 13.1: The system must manage the non-deterministic nature of AI outputs by validating responses before presentation where possible.
 
 
 
