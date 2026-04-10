@@ -2,12 +2,7 @@ from fastapi import FastAPI, Depends
 from sqlmodel import Field, Session, SQLModel, select
 from database import init_db, get_session
 
-
-
-class ChatMessage(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    content: str
-    role: str = Field(default="user")
+from models import ChatMessage, UserSession
 
 
 from contextlib import asynccontextmanager
@@ -26,10 +21,24 @@ def get_history(session: Session = Depends(get_session)):
 
 @app.post("/chat")
 async def chat(message: ChatMessage, session: Session = Depends(get_session)):
+    
+    new_session = UserSession()
+    session.add(new_session)
+    session.commit()
+    session.refresh(new_session)
+
+    
+    message.session_id = new_session.id
     session.add(message)
 
-    assistant_message = ChatMessage(content="hello, user!", role="assistant")
+    
+    assistant_message = ChatMessage(
+        content="hello, user!", 
+        role="assistant", 
+        session_id=new_session.id
+    )
     session.add(assistant_message)
+
     session.commit()
     session.refresh(assistant_message)
     return assistant_message
