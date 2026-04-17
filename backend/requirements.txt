@@ -4,3 +4,4 @@ sqlmodel
 pytest
 psycopg2-binary
 httpx
+behave
