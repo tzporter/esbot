@@ -13,10 +13,8 @@ client = TestClient(app)
 @given('a student session exists in the database')
 def step_impl(context):
     with Session(engine) as db_session:
-        # Önceki testlerden kalan oturumları temizle (Çakışmayı önler)
         db_session.exec(delete(UserSession))
         
-        # Şimdi gönül rahatlığıyla id=1 olan yeni oturumu ekle
         new_session = UserSession(id=1)
         db_session.add(new_session)
         db_session.commit()
@@ -56,8 +54,6 @@ def after_scenario(context, scenario):
         context.mock_ai.stop()
 
 
-# --- ASK QUESTION EKSİK ADIMLAR ---
-
 @when(u'the student sends a POST to /chat with content ""')
 def step_impl(context):
     response = client.post("/chat", json={"content": "", "session_id": getattr(context, 'session_id', 1)})
@@ -66,14 +62,12 @@ def step_impl(context):
 @then(u'no ChatMessage should be created in the database')
 def step_impl(context):
     with Session(engine) as db_session:
-        # DB'de boş mesaj var mı diye kontrol et, olmamalı.
         messages = db_session.exec(select(ChatMessage).where(ChatMessage.content == "")).all()
         assert len(messages) == 0
 
 @then(u'a ChatMessage should be created with role "assistant" and content containing "accusative"')
 def step_impl(context):
     with Session(engine) as db_session:
-        # Asistanın cevabının DB'ye kaydedildiğini doğrula
         msg = db_session.exec(select(ChatMessage).where(ChatMessage.role == "assistant")).first()
         assert msg is not None
         assert "accusative" in msg.content
@@ -91,13 +85,11 @@ def step_impl(context):
 
 @given(u'the AI service is mocked to return an evaluation with is_correct true and feedback "Correct! \'Mache\' is the right conjugation of \'machen\' for \'ich\' in present tense."')
 def step_impl(context):
-    # Bu kısmı evaluate senaryoların için mock'luyoruz
     context.mock_eval = patch.object(ai_provider, 'get_explanation', return_value="True|Correct! 'Mache' is the right conjugation of 'machen' for 'ich' in present tense.")
     context.mock_eval.start()
 
 @when(u'the student submits the answer "mache" to the quiz item')
 def step_impl(context):
-    # Henüz bu endpointi yazmamış olabilirsiniz, test client ile simüle ediyoruz
     response = client.post("/evaluate", json={"answer": "mache", "quiz_item_id": getattr(context, 'quiz_item_id', 1)})
     context.response = response
 
