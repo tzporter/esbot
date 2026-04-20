@@ -6,17 +6,15 @@ from models import QuizItem, UserSession, ChatMessage, SubmittedAnswer, Evaluati
 from database import engine
 from sqlmodel import Session, SQLModel, select, delete
 
-# Tabloları oluştur
 SQLModel.metadata.create_all(engine)
 
 client = TestClient(app)
 
-# --- ORTAK ADIMLAR (Given) ---
 
 @given(u'a student session exists in the database')
 def step_impl(context):
     with Session(engine) as db_session:
-        # Delete leaf → root to respect FK constraints
+        # Delete from leaf to root to respect FK constraints
         db_session.exec(delete(EvaluationResult))
         db_session.exec(delete(SubmittedAnswer))
         db_session.exec(delete(QuizItem))
@@ -25,7 +23,7 @@ def step_impl(context):
         db_session.exec(delete(UserSession))
         db_session.commit()
 
-        session = UserSession(id=1)          # remove user_id if not in your model
+        session = UserSession(id=1)          
         db_session.add(session)
         db_session.commit()
 
@@ -39,7 +37,6 @@ def step_impl(context):
     context.mock_ai = patch.object(ai_provider, 'get_explanation', side_effect=ConnectionError())
     context.mock_ai.start()
 
-# --- ASK QUESTION SENARYOLARI (When/Then) ---
 
 @when('the student sends a POST to /chat with content "{content}"')
 def step_impl(context, content):
@@ -78,7 +75,6 @@ def step_impl(context, keyword):
         assert msg is not None
         assert keyword in msg.content
 
-# --- TEMİZLİK ---
 def after_scenario(context, scenario):
     if hasattr(context, 'mock_ai'):
         context.mock_ai.stop()
