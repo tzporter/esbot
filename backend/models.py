@@ -5,6 +5,7 @@ from datetime import datetime
 
 
 class UserSession(SQLModel, table=True):
+    """Represents a user session, which can have multiple chat messages and quiz requests associated with it."""
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -27,6 +28,7 @@ class UserSession(SQLModel, table=True):
 
 
 class ChatMessage(SQLModel, table=True):
+    """Represents a chat message associated with a user session."""
     id: Optional[int] = Field(default=None, primary_key=True)
     content: str = Field(nullable=False, min_length=1)
     role: str = Field(default="user")
@@ -44,6 +46,7 @@ class ChatMessage(SQLModel, table=True):
 
 
 class QuizRequest(SQLModel, table=True):
+    """Represents a quiz request associated with a user session."""
     id: Optional[int] = Field(default=None, primary_key=True)
     topic: str = Field(nullable=False, min_length=1)
     difficulty: str = Field(default="medium")
