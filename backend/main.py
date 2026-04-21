@@ -4,7 +4,7 @@ from database import init_db, get_session
 from ai_service import AIService
 from pydantic import BaseModel
 
-from models import ChatMessage, QuizItem, SubmittedAnswer, UserSession, EvaluationResult
+from models import ChatMessage, QuizItem, QuizRequest, SubmittedAnswer, UserSession, EvaluationResult
 
 
 from contextlib import asynccontextmanager
@@ -36,6 +36,41 @@ def evaluate_with_retry(question: str, correct_answer: str, user_answer: str) ->
 @app.get("/history")
 def get_history(session: Session = Depends(get_session)):
     return session.exec(select(ChatMessage)).all()
+@app.post("/quiz-request")
+def request_quiz(quiz_data: dict, session: Session = Depends(get_session)):
+    topic = quiz_data.get("topic")
+    session_id = quiz_data.get("session_id")
+
+    if not topic:
+        raise HTTPException(status_code=400, detail="Please provide a topic for the quiz.")
+
+    db_session = session.get(UserSession, session_id)
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    try:
+        quiz_request = QuizRequest(topic=topic, session_id=session_id)
+        session.add(quiz_request)
+        session.commit()
+        session.refresh(quiz_request)
+
+        quiz_json = ai_provider.get_quiz(topic)
+
+        for quiz_item in quiz_json["quiz"]["questions"]:
+            question = quiz_item["question"]
+            answer = quiz_item["answer"]
+            # Here you would create QuizItem instances and associate them with the QuizRequest
+            # For example:
+            new_quiz_item = QuizItem(question=question, answer=answer, quiz_request_id=quiz_request.id)
+            session.add(new_quiz_item)
+
+            session.commit()
+            session.refresh(new_quiz_item)
+
+        return quiz_json
+
+    except ConnectionError:
+        raise HTTPException(status_code=503, detail="AI service is currently unavailable")
 
 @app.post("/chat")
 async def chat(message_data: dict, session: Session = Depends(get_session)):

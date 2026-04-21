@@ -1,6 +1,20 @@
 import os
 from openai import OpenAI
 
+get_quiz_template = """You are ESBot, a helpful learning assistant that generates quizzes.
+When given a topic, you create a quiz with 3 questions of varying difficulty (easy, medium, hard).
+Each question should have a clear answer.
+Format your response as JSON with the following structure:
+{
+  "quiz": {
+    "topic": "Topic Name",
+    "questions": [
+      { "question": "Question text", "answer": "Correct answer" },
+      ...
+    ]
+  }
+}"""
+
 class AIService:
     def __init__(self):
         self.api_key = os.getenv("GROQ_API_KEY", "mock_key")
@@ -89,4 +103,16 @@ If the answer is too ambiguous to evaluate, respond with:
         except Exception as e:
             if isinstance(e, (ValueError,)):
                 raise
+    def get_quiz(self, topic: str):
+        try:
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", 
+                     "content": get_quiz_template},
+                    {"role": "user", "content": f"Generate a quiz on the topic: {topic}"}
+                ],
+                model="llama3-8b-8192",
+            )
+            return response.choices[0].message.content
+        except Exception:
             raise ConnectionError("AI service is currently unavailable")

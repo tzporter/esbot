@@ -1,4 +1,7 @@
-from backend.models import QuizItem, QuizRequest, UserSession
+from numpy import select
+from requests import Session, delete
+
+from models import QuizItem, QuizRequest, UserSession
 from behave import given, when, then
 
 # Feature: Request and Generate a Quiz
@@ -10,50 +13,56 @@ from behave import given, when, then
   #   Given a student session exists in the database
 
   # Scenario: Successfully request and receive a quiz on a valid topic
-  @given('a student session exists in the database')
-  def step_impl(context):
-    # Create a new user session in the database for testing
-    new_session = UserSession()
-    context.db_session.add(new_session)
-    context.db_session.commit()
-    context.db_session.refresh(new_session)
-    context.session = new_session
 
-  @given('the AI service is mocked to return a structured quiz with question "Conjugate \'machen\' in present tense for \'ich\'" and answer "mache"')
-  def step_impl(context):
-    # Mock the AI service to return a structured quiz response
-    context.mock_ai_service_response({
-      "quiz": {
-        "topic": "German verb conjugation",
-        "items": [
-          {
-            "question": "Conjugate 'machen' in present tense for 'ich'",
-            "answer": "mache"
-          }
-        ]
-      }
-    })
-  @when('the student sends a POST to /chat with content "<content>" and quiz toggle is enabled')
-  def step_impl(context):
-    # Send a POST request to the /chat endpoint with the specified content
-    context.response = context.client.post('/chat', json={"content": context.content, "quiz_enabled": True})
-  @then('the response status code should be 200')
-  def step_impl(context):
-    # Assert that the response status code is 200
-    assert context.response.status_code == 200
-  @then('a QuizRequest should be created with topic "German verb conjugation"')
-  def step_impl(context):
-    # Assert that a QuizRequest was created in the database with the correct topic
+@given('a student session exists in the database')
+def step_impl(context):
+  with Session(engine) as db_session:
+      db_session.exec(delete(UserSession))
+      
+      new_session = UserSession(id=1)
+      db_session.add(new_session)
+      db_session.commit()
+      context.session_id = 1
 
-    assert quiz_request is not None
-  @then('a QuizItem should be created with question "Conjugate \'machen\' in present tense for \'ich\'"')
-  def step_impl(context):    # Assert that a QuizItem was created in the database with the correct question
-
-    assert quiz_item is not None
-  @then('the QuizItem should have the correct answer "mache"')
-  def step_impl(context):    # Assert that the QuizItem has the correct answer
-
-    assert quiz_item.answer == "mache"
+@given('the AI service is mocked to return a structured quiz with question "Conjugate \'machen\' in present tense for \'ich\'" and answer "mache"')
+def step_impl(context):
+  # Mock the AI service to return a structured quiz response
+  quiz_response = {
+    "quiz": {
+      "topic": "German verb conjugation",
+      "questions": [
+        {
+          "question": "Conjugate 'machen' in present tense for 'ich'",
+          "answer": "mache"
+        }
+      ]
+    }
+  }
+  context.mock_ai = patch.object(ai_provider, 'get_quiz', return_value=quiz_response)
+@when('the student sends a POST to /chat with content "<content>" and quiz toggle is enabled')
+def step_impl(context):
+  # Send a POST request to the /chat endpoint with the specified content
+  context.response = context.client.post('/chat', json={"content": context.content, "quiz_enabled": True})
+@then('the response status code should be 200')
+def step_impl(context):
+  # Assert that the response status code is 200
+  assert context.response.status_code == 200
+@then('a QuizRequest should be created with topic "German verb conjugation"')
+def step_impl(context):
+  # Assert that a QuizRequest was created in the database with the correct topic
+  with Session(engine) as db_session:
+      quiz_request = db_session.exec(select(QuizRequest).where(QuizRequest.topic == "German verb conjugation")).first()
+      assert quiz_request is not None
+@then('a QuizItem should be created with question "Conjugate \'machen\' in present tense for \'ich\'"')
+def step_impl(context):    # Assert that a QuizItem was created in the database with the correct question
+  with Session(engine) as db_session:
+      quiz_item = db_session.exec(select(QuizItem).where(QuizItem.question_text == "Conjugate 'machen' in present tense for 'ich'")).first()
+      assert quiz_item is not None
+@then('the QuizItem should have the correct answer "mache"')
+def step_impl(context):    # Assert that the QuizItem has the correct answer
+  with Session(engine) as db_session:
+      quiz_item = db_session.exec(select(QuizItem).where(QuizItem.question_text == "Conjugate 'machen' in present tense for 'ich'")).first()
+      assert quiz_item.correct_answer == "mache"
 
 
 

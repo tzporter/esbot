@@ -6,3 +6,5 @@ psycopg2-binary
 httpx
 behave
 openai
+numpy
+requests

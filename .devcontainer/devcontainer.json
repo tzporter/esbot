@@ -1,37 +1,38 @@
 {
-    "name": "ESBot Development",
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-
-    "features": {
-      "ghcr.io/devcontainers/features/node:1": {
-        "version": "20",
-        "nodeGypDependencies": true,
-        "installYarnUsingApt": false
-      },
-      "ghcr.io/devcontainers/features/java:1": {
-        "version": "17"
-      }
-    },  
-  
-    "customizations": {
-      "vscode": {
-        "extensions": [
-          "vscjava.vscode-java-pack",
-          "vue.volar",
-          "dbaeumer.vscode-eslint",
-          "esbenp.prettier-vscode"
+  "name": "ESBot Development",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "backend",
+  "workspaceFolder": "/backend",
+  "features": {
+    // "ghcr.io/devcontainers/features/node:1": {
+    //   "version": "20",
+    //   "nodeGypDependencies": true,
+    //   "installYarnUsingApt": false
+    // },
+    // "ghcr.io/devcontainers/features/java:1": {
+    //   "version": "17"
+    // }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "ms-python.python", // Required for Python support
+        "ms-python.vscode-pylint", // Optional: Linting
+        "alexkrechik.cucumberautocomplete" // Recommended: Gherkin syntax & navigation
+      ],
+      "settings": {
+        "python.testing.pytestEnabled": false,
+        "python.testing.unittestEnabled": false,
+        // Tells the editor where to find your feature files
+        "cucumberautocomplete.steps": [
+          "backend/features/steps/*.py"
         ],
-        "settings": {
-          "java.configuration.updateBuildConfiguration": "automatic"
-        }
+        "cucumberautocomplete.syncfeatures": "backend/features/*.feature"
       }
-    },
-  
-    "postCreateCommand": "sudo apt-get update && curl -LsSf https://astral.sh/uv/install.sh | sh",
-    
-    "remoteUser": "root",
-    
-    "mounts": [
-      "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
-    ]
-  }
+    }
+  },
+  // "postCreateCommand": "sudo apt-get update && curl -LsSf https://astral.sh/uv/install.sh | sh",
+  "postCreateCommand": "pip install -r backend/requirements.txt",
+  "remoteUser": "root"
+}
