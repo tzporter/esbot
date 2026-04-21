@@ -8,11 +8,11 @@ from sqlmodel import Session, SQLModel, select, delete
 
 SQLModel.metadata.create_all(engine)
 
-client = TestClient(app)
 
 
 @given(u'a student session exists in the database')
 def step_impl(context):
+    context.client = TestClient(app)
     with Session(engine) as db_session:
         # Delete from leaf to root to respect FK constraints
         db_session.exec(delete(EvaluationResult))
@@ -40,12 +40,12 @@ def step_impl(context):
 
 @when('the student sends a POST to /chat with content "{content}"')
 def step_impl(context, content):
-    response = client.post("/chat", json={"content": content, "session_id": getattr(context, 'session_id', 1)})
+    response = context.client.post("/chat", json={"content": content, "session_id": getattr(context, 'session_id', 1)})
     context.response = response
 
 @when(u'the student sends a POST to /chat with content ""')
 def step_impl(context):
-    response = client.post("/chat", json={"content": "", "session_id": getattr(context, 'session_id', 1)})
+    response = context.client.post("/chat", json={"content": "", "session_id": getattr(context, 'session_id', 1)})
     context.response = response
 
 @then('the response status code should be {status_code:d}')
@@ -60,6 +60,7 @@ def step_impl(context, role, content):
 
 @then('the response should contain the message "{error_msg}"')
 def step_impl(context, error_msg):
+    print(context.response.json())
     assert error_msg in context.response.json().get("detail", "")
 
 @then(u'no ChatMessage should be created in the database')
@@ -82,3 +83,5 @@ def after_scenario(context, scenario):
         context.mock_eval.stop()
     if hasattr(context, 'mock_quiz'):
         context.mock_quiz.stop()
+    if hasattr(context, 'mock_explanation'):
+        context.mock_explanation.stop()

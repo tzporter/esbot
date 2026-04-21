@@ -3,6 +3,7 @@ from sqlmodel import Field, Session, SQLModel, select
 from database import init_db, get_session
 from ai_service import AIService
 from pydantic import BaseModel
+import json
 
 from models import ChatMessage, QuizItem, QuizRequest, SubmittedAnswer, UserSession, EvaluationResult
 
@@ -32,16 +33,29 @@ def evaluate_with_retry(question: str, correct_answer: str, user_answer: str) ->
             last_error = e
     raise last_error
 
+def get_quiz_with_retry(topic: str) -> dict:
+    last_error = None
+    for attempt in range(2):
+        try:
+            return ai_provider.get_quiz(topic)
+        except ConnectionError as e:
+            last_error = e
+        except Exception as e:
+            if "Unstructured format" in str(e):
+                last_error = e
+                continue
+            raise e
+    raise last_error
+
 
 @app.get("/history")
 def get_history(session: Session = Depends(get_session)):
     return session.exec(select(ChatMessage)).all()
 @app.post("/quiz-request")
-def request_quiz(quiz_data: dict, session: Session = Depends(get_session)):
-    topic = quiz_data.get("topic")
-    session_id = quiz_data.get("session_id")
-
-    if not topic:
+def request_quiz(request_data: dict, session: Session = Depends(get_session)):
+    topic = request_data.get("topic")
+    session_id = request_data.get("session_id")
+    if not topic or topic.strip() == "":
         raise HTTPException(status_code=400, detail="Please provide a topic for the quiz.")
 
     db_session = session.get(UserSession, session_id)
@@ -49,28 +63,33 @@ def request_quiz(quiz_data: dict, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
+        quiz_json = get_quiz_with_retry(topic)
+        
+        if isinstance(quiz_json, dict) and quiz_json.get("status") == "error":
+             raise HTTPException(status_code=400, detail=quiz_json.get("message"))
+
         quiz_request = QuizRequest(topic=topic, session_id=session_id)
         session.add(quiz_request)
         session.commit()
         session.refresh(quiz_request)
 
-        quiz_json = ai_provider.get_quiz(topic)
-
         for quiz_item in quiz_json["quiz"]["questions"]:
             question = quiz_item["question"]
             answer = quiz_item["answer"]
-            # Here you would create QuizItem instances and associate them with the QuizRequest
-            # For example:
-            new_quiz_item = QuizItem(question=question, answer=answer, quiz_request_id=quiz_request.id)
+            new_quiz_item = QuizItem(question_text=question, correct_answer=answer, quiz_request_id=quiz_request.id)
             session.add(new_quiz_item)
 
-            session.commit()
-            session.refresh(new_quiz_item)
+        session.commit()
 
         return quiz_json
 
     except ConnectionError:
         raise HTTPException(status_code=503, detail="AI service is currently unavailable")
+    except Exception as e:
+        detail = str(e)
+        if "safety" in detail and not detail.startswith("Request rejected:"):
+            detail = f"Request rejected: {detail}"
+        raise HTTPException(status_code=422, detail=detail)
 
 @app.post("/chat")
 async def chat(message_data: dict, session: Session = Depends(get_session)):
@@ -84,21 +103,30 @@ async def chat(message_data: dict, session: Session = Depends(get_session)):
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    try:
-        user_msg = ChatMessage(content=content, role="user", session_id=session_id)
-        session.add(user_msg)
+    user_msg = ChatMessage(content=content, role="user", session_id=session_id)
+    session.add(user_msg)
+    
         
+    try:
         response_content = ai_provider.get_explanation(content)
         
-        assistant_msg = ChatMessage(content=response_content, role="assistant", session_id=session_id)
-        session.add(assistant_msg)
-        
-        session.commit()
-        session.refresh(assistant_msg)
-        return assistant_msg
+        # Check if response is JSON error
+        try:
+            resp_json = json.loads(response_content)
+            if resp_json.get("status") == "error":
+                raise HTTPException(status_code=400, detail=resp_json.get("message"))
+        except (json.JSONDecodeError, TypeError):
+            pass
 
+        assistant_msg = ChatMessage(content=response_content, role="assistant", session_id=session_id)
     except ConnectionError:
         raise HTTPException(status_code=503, detail="AI service is currently unavailable")
+    
+    session.add(assistant_msg)
+    session.commit()
+    session.refresh(assistant_msg)
+    return assistant_msg
+
     
 @app.post("/quiz-items/{quiz_item_id}/submit")
 def submit_answer(

@@ -1,5 +1,6 @@
 import os
 from openai import OpenAI
+import json
 
 get_quiz_template = """You are ESBot, a helpful learning assistant that generates quizzes.
 When given a topic, you create a quiz with 3 questions of varying difficulty (easy, medium, hard).
@@ -24,15 +25,20 @@ class AIService:
         )
 
     def get_explanation(self, prompt: str):
+        system_prompt = """You are ESBot, a helpful learning assistant.
+When asked a question, you should respond with a clear and concise explanation.
+If a user requests a quiz, respond with the JSON: { "status": "error", "message": "The quiz feature is not enabled. Please press the quiz button to enable it then try again."}.
+                """
         try:
             chat_completion = self.client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You are ESBot, a helpful learning assistant."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 model="llama3-8b-8192",
             )
-            return chat_completion.choices[0].message.content
+            content = chat_completion.choices[0].message.content
+            return content
         except Exception:
             raise ConnectionError("AI service is currently unavailable")
         
@@ -113,6 +119,17 @@ If the answer is too ambiguous to evaluate, respond with:
                 ],
                 model="llama3-8b-8192",
             )
-            return response.choices[0].message.content
+            raw_content = response.choices[0].message.content.strip()
+            
+            # Strip accidental markdown code fences
+            if raw_content.startswith("```"):
+                raw_content = raw_content.split("```")[1]
+                if raw_content.startswith("json"):
+                    raw_content = raw_content[4:]
+                raw_content = raw_content.strip()
+                
+            return json.loads(raw_content)
+        except json.JSONDecodeError:
+            raise Exception("Unstructured format")
         except Exception:
             raise ConnectionError("AI service is currently unavailable")
