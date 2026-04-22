@@ -11,9 +11,7 @@ SQLModel.metadata.create_all(engine)
 client = TestClient(app)
 
 
-# ---------------------------------------------------------------------------
-# Given – fixtures
-# ---------------------------------------------------------------------------
+# Given
 
 @given('a QuizItem exists with question "{question}" and correct answer "{correct_answer}"')
 def step_impl(context, question, correct_answer):
@@ -25,7 +23,7 @@ def step_impl(context, question, correct_answer):
         db_session.exec(delete(QuizRequest))
         db_session.commit()
 
-        # Create a QuizRequest as parent (required by FK)
+        # Create a QuizRequest as parent 
         quiz_request = QuizRequest(id=1, topic="German verbs", difficulty="medium", session_id=1)
         db_session.add(quiz_request)
         db_session.commit()
@@ -74,9 +72,7 @@ def step_impl(context):
     context.mock_eval.start()
 
 
-# ---------------------------------------------------------------------------
 # When
-# ---------------------------------------------------------------------------
 
 @when('the student submits the answer "{user_answer}" to the quiz item')
 def step_impl(context, user_answer):
@@ -88,9 +84,7 @@ def step_impl(context, user_answer):
     context.response = response
 
 
-# ---------------------------------------------------------------------------
-# Then – assertions
-# ---------------------------------------------------------------------------
+# Then 
 
 @then('a SubmittedAnswer should be created with user_answer "{user_answer}"')
 def step_impl(context, user_answer):
@@ -139,9 +133,7 @@ def step_impl(context):
     assert feedback, f"Expected a non-empty 'feedback' field in the response, got: {body}"
 
 
-# ---------------------------------------------------------------------------
 # Cleanup
-# ---------------------------------------------------------------------------
 
 def after_scenario(context, scenario):
     for mock_attr in ("mock_eval", "mock_ai", "mock_quiz"):
