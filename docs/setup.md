@@ -1,7 +1,3 @@
-<!-- This file was created with AI assistance. AI was used to draft the
-documentation of the combined test-suite command and to check consistency
-with the actual backend project structure. -->
-
 # ESBot Setup and Configuration
 
 ## Backend Configuration
@@ -80,3 +76,8 @@ deterministic and means no API key or network access is required to run them.
 
 For a discussion of *when* unit tests and BDD tests should run in the CI
 pipeline, see [`docs/spec/test-strategy.md`](spec/test-strategy.md).
+
+
+<!-- This file was created with AI assistance. AI was used to draft the
+documentation of the combined test-suite command and to check consistency
+with the actual backend project structure. -->
