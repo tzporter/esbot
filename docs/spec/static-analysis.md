@@ -8,15 +8,15 @@
 ## Justification
 
 Ruff was chosen as the linter because ESBot is a multi-developer 
-Python project with contributors working across frontend (Streamlit), 
-backend (FastAPI), and test code. A linter enforces consistent style 
+Python project with contributors working across frontend , 
+backend, and test code. A linter enforces consistent style 
 and catches common mistakes like unused imports and redefined names, 
 which become increasingly important as the codebase grows across 
 multiple team members.
 
 Bandit was chosen as the security scanner because ESBot handles 
 several security-sensitive areas: API keys for the Groq LLM service, 
-user-supplied chat input passed to an AI model (prompt injection risk), 
+user-supplied chat input passed to an AI model, 
 and a PostgreSQL database accessed through FastAPI endpoints. 
 Identifying vulnerabilities in these areas early is critical.
 
@@ -65,23 +65,21 @@ The issues fell into these categories:
 
 - **E501 (Line too long):** Most common finding. Many lines in 
   `main.py` and BDD step files exceed the 88-character limit. 
-  Cosmetic but affects readability.
 - **F811 (Redefined function name):** Flagged extensively in BDD 
-  step files where every step function is named `step_impl`. This 
-  is standard Behave framework convention and not a real defect.
+  step files where every step function is named `step_impl`. 
 - **F401 (Unused imports):** Several files import modules that are 
   never used, including `UserSession` in `conftest.py` and `Field`, 
-  `SQLModel` in `main.py`. These are genuine minor issues.
+  `SQLModel` in `main.py`. 
 - **W293/W292 (Whitespace issues):** Blank lines containing spaces 
-  and missing newlines at end of file. Minor formatting issues.
+  and missing newlines at end of file.
 - **E401 (Multiple imports on one line):** `import sys, os` in 
   `conftest.py` should be split into two lines.
 
 34 of the 127 issues were automatically fixed using `ruff check . --fix`.
 
-### Bandit — 90 issues found (all Low severity)
+### Bandit — 90 issues found  
 
-All 90 findings were **B101: assert_used** — Bandit flagging the 
+All 90 findings were **B101: assert_used** that is Bandit flagging the 
 use of `assert` statements across test files. This warning exists 
 because Python's `-O` optimization flag strips `assert` statements 
 at runtime, which could hide logic errors in production code.
@@ -98,22 +96,15 @@ test directories. No medium or high severity issues were found.
 Ruff was immediately useful. The unused import findings in `main.py` 
 and `conftest.py` are genuine code quality issues that could cause 
 confusion for future developers. The whitespace findings, while minor, 
-were easy to fix automatically. The F811 findings correctly identified 
-that the BDD step files use a non-standard naming pattern that could 
-confuse developers unfamiliar with Behave.
+were easy to fix automatically.
 
 Bandit was less immediately useful for this codebase in its default 
-configuration. The absence of any Medium or High severity findings 
-is a positive result — it indicates no obvious SQL injection patterns, 
-hardcoded credentials, or unsafe deserialization in the main 
-application code.
+configuration.  
 
 ### Noise and False Positives
 
 Ruff's F811 warnings on Behave step files are false positives. The 
 `step_impl` naming pattern is a Behave convention, not a real defect. 
-These could be suppressed by adding `# noqa: F811` comments or 
-excluding the `features/steps` directory.
 
 Bandit's B101 warnings are entirely false positives in this context. 
 Scanning test files for assert usage produces no actionable findings. 
@@ -134,7 +125,8 @@ developer effort.
 
 Ruff would be a good candidate for CI/CD integration due to its 
 speed and low false positive rate on application code. Bandit would 
-require additional configuration (specifically excluding test 
-directories and suppressing B101) before pipeline integration to 
+require additional configuration before pipeline integration to 
 avoid generating noise on every run. For this reason, both tools 
 are currently documented for local execution only.
+
+Claude AI was used in the development of this document as a form of brainstorming and revising my work. All AI-edited content was thoroughly checked.
