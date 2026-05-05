@@ -87,9 +87,9 @@ No direct communication with authors was conducted due to time constraints.
 
 | Reviewer | Scope | Abbr. |
 |:--------:|-------|-------|
-| 1 | Architecture & modularity | R1 |
-| 2 | Security & integrations | R2 |
-| 3 | Documentation & usability | R3 |
+| 1 Zeynep Pektas | Architecture & modularity | R1 |
+| 2 Truman Porter | Security & integrations | R2 |
+| 3 Melek Gokler | Documentation & usability | R3 |
 
 ---
 
