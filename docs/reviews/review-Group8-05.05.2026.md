@@ -15,12 +15,7 @@
 This review is based on inspection of the ESBot GitHub repository.  
 The project is a bot system with:
 
-- Command-based architecture  
-- External integrations  
-- Multiple database backends  
-- Modular command handling  
-
-No direct communication with authors was conducted.
+No direct communication with authors was conducted due to time constraints.
 
 ---
 
