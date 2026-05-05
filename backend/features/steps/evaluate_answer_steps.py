@@ -1,8 +1,8 @@
 from behave import given, when, then
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from main import app, ai_provider
-from models import QuizItem, UserSession, QuizRequest, SubmittedAnswer, EvaluationResult
+from models import QuizItem, QuizRequest, SubmittedAnswer, EvaluationResult
 from database import engine
 from sqlmodel import Session, SQLModel, select, delete
 
@@ -23,7 +23,7 @@ def step_impl(context, question, correct_answer):
         db_session.exec(delete(QuizRequest))
         db_session.commit()
 
-        # Create a QuizRequest as parent 
+        # Create a QuizRequest as parent
         quiz_request = QuizRequest(id=1, topic="German verbs", difficulty="medium", session_id=1)
         db_session.add(quiz_request)
         db_session.commit()
@@ -84,7 +84,7 @@ def step_impl(context, user_answer):
     context.response = response
 
 
-# Then 
+# Then
 
 @then('a SubmittedAnswer should be created with user_answer "{user_answer}"')
 def step_impl(context, user_answer):

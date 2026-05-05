@@ -39,7 +39,7 @@ def test_chat_and_history(client: TestClient):
     data = response.json()
     assert data["role"] == "assistant"
     assert data["content"] == "hello, user!"
-    
+
     # Test retrieving history
     response = client.get("/history")
     assert response.status_code == 200

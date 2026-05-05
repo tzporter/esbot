@@ -1,13 +1,13 @@
 from numpy import select
-from requests import Session, delete
+from requests import Session
 
-from models import QuizItem, QuizRequest, UserSession
+from models import QuizItem, QuizRequest
 from behave import given, when, then
 
 from unittest.mock import patch
 from main import ai_provider
 from database import engine
-from sqlmodel import Session, SQLModel, select, delete
+from sqlmodel import Session, select
 import json
 
 # Feature: Request and Generate a Quiz
@@ -48,7 +48,7 @@ def step_impl(context, response):
   context.mock_explanation = patch.object(ai_provider, 'get_explanation', return_value=json.dumps(error_response))
   context.mock_quiz.start()
   context.mock_explanation.start()
-  
+
 
 
 @when('the student sends a POST to /quiz-request with content "{content}"')

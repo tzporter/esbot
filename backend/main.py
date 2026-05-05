@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from sqlmodel import Field, Session, SQLModel, select
+from sqlmodel import Session, select
 from database import init_db, get_session
 from ai_service import AIService
 from pydantic import BaseModel
@@ -64,7 +64,7 @@ def request_quiz(request_data: dict, session: Session = Depends(get_session)):
 
     try:
         quiz_json = get_quiz_with_retry(topic)
-        
+
         if isinstance(quiz_json, dict) and quiz_json.get("status") == "error":
              raise HTTPException(status_code=400, detail=quiz_json.get("message"))
 
@@ -105,11 +105,11 @@ async def chat(message_data: dict, session: Session = Depends(get_session)):
 
     user_msg = ChatMessage(content=content, role="user", session_id=session_id)
     session.add(user_msg)
-    
-        
+
+
     try:
         response_content = ai_provider.get_explanation(content)
-        
+
         # Check if response is JSON error
         try:
             resp_json = json.loads(response_content)
@@ -121,13 +121,13 @@ async def chat(message_data: dict, session: Session = Depends(get_session)):
         assistant_msg = ChatMessage(content=response_content, role="assistant", session_id=session_id)
     except ConnectionError:
         raise HTTPException(status_code=503, detail="AI service is currently unavailable")
-    
+
     session.add(assistant_msg)
     session.commit()
     session.refresh(assistant_msg)
     return assistant_msg
 
-    
+
 @app.post("/quiz-items/{quiz_item_id}/submit")
 def submit_answer(
     quiz_item_id: int,

@@ -23,7 +23,7 @@ def step_impl(context):
         db_session.exec(delete(UserSession))
         db_session.commit()
 
-        session = UserSession(id=1)          
+        session = UserSession(id=1)
         db_session.add(session)
         db_session.commit()
 

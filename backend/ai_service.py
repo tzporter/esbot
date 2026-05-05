@@ -41,7 +41,7 @@ If a user requests a quiz, respond with the JSON: { "status": "error", "message"
             return content
         except Exception:
             raise ConnectionError("AI service is currently unavailable")
-        
+
     def evaluate_answer(
         self,
         question: str,
@@ -113,21 +113,21 @@ If the answer is too ambiguous to evaluate, respond with:
         try:
             response = self.client.chat.completions.create(
                 messages=[
-                    {"role": "system", 
+                    {"role": "system",
                      "content": get_quiz_template},
                     {"role": "user", "content": f"Generate a quiz on the topic: {topic}"}
                 ],
                 model="llama3-8b-8192",
             )
             raw_content = response.choices[0].message.content.strip()
-            
+
             # Strip accidental markdown code fences
             if raw_content.startswith("```"):
                 raw_content = raw_content.split("```")[1]
                 if raw_content.startswith("json"):
                     raw_content = raw_content[4:]
                 raw_content = raw_content.strip()
-                
+
             return json.loads(raw_content)
         except json.JSONDecodeError:
             raise Exception("Unstructured format")
