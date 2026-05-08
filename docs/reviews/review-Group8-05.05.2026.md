@@ -36,8 +36,6 @@ No direct communication with authors was conducted due to time constraints.
 
 ### 2.2 Review objects
 
-### 2.2 Review objects
-
 | # | Review objects | Abbr. |
 |---|----------------|-------|
 | 1 | `docs/esbot.md` | EB |
@@ -159,7 +157,7 @@ The technical inspection reveals a project with strong initial feature work but 
 |-------|----------|-------------|----------|
 | Identity Refactor | Implement a persistent User model to replace the current ephemeral session-only identity. | Authors |2026-05-19|
 | Test Integrity | Align BDD step definitions with the domain model to ensure tests reflect actual system capabilities. | Authors |2026-05-19 |
-| Async Migration | Replace psycopg2 with an asynchronous driver (e.g., asyncpg) to prevent event-loop blocking. | Authors | 2026-05-09 |
+| Async Migration | Replace psycopg2 with an asynchronous driver (e.g., asyncpg) to prevent event-loop blocking. | Authors | 2026-05-19 |
 
 ---
 

@@ -77,6 +77,36 @@ deterministic and means no API key or network access is required to run them.
 For a discussion of *when* unit tests and BDD tests should run in the CI
 pipeline, see [`docs/spec/test-strategy.md`](spec/test-strategy.md).
 
+## Static Code Analysis
+
+ESBot uses two tools for static code analysis, configured in `pyproject.toml`.
+
+### Setup
+
+To install the necessary tools, run:
+
+```bash
+pip install ruff bandit
+```
+
+### Running Static Analysis
+
+**Ruff (Linter):**
+```bash
+ruff check .
+```
+To automatically fix simple issues:
+```bash
+ruff check . --fix
+```
+
+**Bandit (Security Scanner):**
+```bash
+bandit -r . -x ./tests,./.venv
+```
+
+For more details on why these tools were selected and their configuration, see [`docs/spec/static-analysis.md`](spec/static-analysis.md).
+
 
 <!-- This file was created with AI assistance. AI was used to draft the
 documentation of the combined test-suite command and to check consistency
