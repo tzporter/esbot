@@ -84,5 +84,181 @@ The answer evaluation feature (FR-004) generates feedback based on three main co
 
 *(Note: The `-` denotes a "don't-care" condition. If the quiz item no longer exists, neither the correctness nor whether the answer is empty matter. If the answer is empty, correctness is irrelevant since it cannot be evaluated.)*
 
+---
 
-AI was used to assist in the creation of this document. All AI produced material has been thoroughly checked and edited.
+## Exercise 7.2: State Transition Testing — Learning Session Lifecycle
+
+### Step 1: State Transition Diagram
+
+![UserSession State Transition Diagram](./assets/v2.png)
+
+### Step 2: State Transition Table
+
+| Current State | Event              | Next State        | Output / Action                                                                                                              |
+|---------------|--------------------|-------------------|------------------------------------------------------------------------------------------------------------------------------|
+| `NEW`         | `submit_message`   | `ACTIVE`          | Message accepted. Generate response.                                                                                         |
+| `NEW`         | `request_quiz`     | `ACTIVE`          | Request accepted. If not provided, ask for topic or material to generate quiz.                                               |
+| `NEW`         | `submit_answer`    | – (invalid)       | Return controlled error: "No active quiz item to answer."                                                                    |
+| `NEW`         | `inactivity_timeout` | `IDLE`          | No interactions recorded. Further messages will require resume_session.                                                      |
+| `NEW`         | `session_timeout`  | `EXPIRED`         | Session lifetime exceeded. No further interactions accepted.                                                                 |
+| `NEW`         | `close_session`    | `EXPIRED`         | Session terminated by user/system. No further interactions accepted.                                                         |
+| `NEW`         | `resume_session`   | – (invalid)       | Return controlled error: "A NEW session cannot be resumed."                                                                  |
+| `ACTIVE`      | `submit_message`   | `ACTIVE`          | Message accepted. Generate response.                                                                                         |
+| `ACTIVE`      | `request_quiz`     | `ACTIVE`          | Request accepted. If not provided, ask for topic or material to generate quiz.                                               |
+| `ACTIVE`      | `submit_answer`    | `ACTIVE` or – (invalid) | If active quiz item exists, evaluate answer and return feedback. Otherwise, return controlled error: "No active quiz item." |
+| `ACTIVE`      | `inactivity_timeout` | `IDLE`          | No interactions recorded. Further messages will require resume_session.                                                      |
+| `ACTIVE`      | `session_timeout`  | `EXPIRED`         | Session lifetime exceeded. No further interactions accepted.                                                                 |
+| `ACTIVE`      | `close_session`    | `EXPIRED`         | Session terminated by user/system. No further interactions accepted.                                                         |
+| `ACTIVE`      | `resume_session`   | – (invalid)       | Return controlled error: "An ACTIVE session cannot be resumed."                                                              |
+| `IDLE`        | `submit_message`   | – (invalid)       | Return controlled error: "Messages cannot be submitted on a session in IDLE state."                                          |
+| `IDLE`        | `request_quiz`     | – (invalid)       | Return controlled error: "Quizzes cannot be requested on a session in IDLE state."                                           |
+| `IDLE`        | `submit_answer`    | – (invalid)       | Return controlled error: "Answers cannot be submitted on a session in IDLE state."                                           |
+| `IDLE`        | `inactivity_timeout` | `IDLE`          | No interaction recorded. Already IDLE.                                                                                       |
+| `IDLE`        | `session_timeout`  | `EXPIRED`         | Session lifetime exceeded. No further interactions accepted.                                                                 |
+| `IDLE`        | `close_session`    | `EXPIRED`         | Session terminated by user/system. No further interactions accepted.                                                         |
+| `IDLE`        | `resume_session`   | `ACTIVE`          | Session resumes. Wait for input.                                                                                             |
+| `EXPIRED`     | `submit_message`   | – (invalid)       | Return controlled error: "Messages cannot be submitted on an EXPIRED session."                                               |
+| `EXPIRED`     | `request_quiz`     | – (invalid)       | Return controlled error: "Quizzes cannot be requested on an EXPIRED session."                                                |
+| `EXPIRED`     | `submit_answer`    | – (invalid)       | Return controlled error: "Answers cannot be submitted on an EXPIRED session."                                                |
+| `EXPIRED`     | `inactivity_timeout` | `EXPIRED`       | Event ignored. Session already EXPIRED.                                                                                      |
+| `EXPIRED`     | `session_timeout`  | `EXPIRED`         | Event ignored. Session already EXPIRED.                                                                                      |
+| `EXPIRED`     | `close_session`    | – (invalid)       | Return controlled error: "An EXPIRED session cannot be closed."                                                              |
+| `EXPIRED`     | `resume_session`   | – (invalid)       | Return controlled error: "An EXPIRED session cannot be resumed."                                                             |
+
+### Step 3: Test Case Derivation (All-Transitions Coverage)
+
+The following test sequences together cover **every valid transition at least once**, plus one sequence that exercises an invalid transition. Each sequence starts from the implied start state of a freshly created session (`NEW`).
+
+#### TS-1: Typical Learning Session — Happy Path with Idle Recovery
+
+**Verifies:** FR-001, FR-002, FR-003, FR-004, FR-005
+**Start state:** `NEW`
+
+| Step | Event              | Expected State | Expected Output                                          |
+|------|--------------------|----------------|----------------------------------------------------------|
+| 1    | `submit_message`   | `ACTIVE`       | Message accepted; response generated                     |
+| 2    | `request_quiz`     | `ACTIVE`       | Quiz request accepted; quiz items generated              |
+| 3    | `submit_answer`    | `ACTIVE`       | Answer evaluated; feedback returned (FR-004)             |
+| 4    | `inactivity_timeout` | `IDLE`       | Session marked idle; further input requires resume       |
+| 5    | `resume_session`   | `ACTIVE`       | Session resumes; ready for input                         |
+| 6    | `submit_message`   | `ACTIVE`       | Message accepted; response generated                     |
+| 7    | `close_session`    | `EXPIRED`      | Session terminated                                       |
+| 8    | `inactivity_timeout` | `EXPIRED`    | Event ignored; session already EXPIRED                   |
+| 9    | `session_timeout`  | `EXPIRED`      | Event ignored; session already EXPIRED                   |
+
+**Transitions covered:** NEW→ACTIVE (submit_message), ACTIVE→ACTIVE (request_quiz), ACTIVE→ACTIVE (submit_answer), ACTIVE→IDLE (inactivity_timeout), IDLE→ACTIVE (resume_session), ACTIVE→ACTIVE (submit_message), ACTIVE→EXPIRED (close_session), EXPIRED→EXPIRED (inactivity_timeout), EXPIRED→EXPIRED (session_timeout).
+
+---
+
+#### TS-2: Quiz-First Path with Session Lifetime Expiry
+
+**Verifies:** FR-003, FR-005
+**Start state:** `NEW`
+
+| Step | Event             | Expected State | Expected Output                              |
+|------|-------------------|----------------|----------------------------------------------|
+| 1    | `request_quiz`    | `ACTIVE`       | Quiz request accepted; quiz items generated  |
+| 2    | `session_timeout` | `EXPIRED`      | Session lifetime exceeded; no further input  |
+
+**Transitions covered:** NEW→ACTIVE (request_quiz), ACTIVE→EXPIRED (session_timeout).
+
+---
+
+#### TS-3: Idle From Start → Repeated Idle → Expiry
+
+**Verifies:** FR-005, edge case "session state missing or expired"
+**Start state:** `NEW`
+
+| Step | Event                | Expected State | Expected Output                                 |
+|------|----------------------|----------------|-------------------------------------------------|
+| 1    | `inactivity_timeout` | `IDLE`         | Session marked idle without prior interaction   |
+| 2    | `inactivity_timeout` | `IDLE`         | Already IDLE; no state change                   |
+| 3    | `session_timeout`    | `EXPIRED`      | Session lifetime exceeded                       |
+
+**Transitions covered:** NEW→IDLE (inactivity_timeout), IDLE→IDLE (inactivity_timeout), IDLE→EXPIRED (session_timeout).
+
+---
+
+#### TS-4: Immediate Close From NEW
+
+**Verifies:** FR-005
+**Start state:** `NEW`
+
+| Step | Event           | Expected State | Expected Output       |
+|------|-----------------|----------------|-----------------------|
+| 1    | `close_session` | `EXPIRED`      | Session terminated    |
+
+**Transitions covered:** NEW→EXPIRED (close_session).
+
+---
+
+#### TS-5: Immediate Session Timeout From NEW
+
+**Verifies:** FR-005
+**Start state:** `NEW`
+
+| Step | Event             | Expected State | Expected Output                 |
+|------|-------------------|----------------|---------------------------------|
+| 1    | `session_timeout` | `EXPIRED`      | Session lifetime exceeded       |
+
+**Transitions covered:** NEW→EXPIRED (session_timeout).
+
+---
+
+#### TS-6: Idle Then User Closes Session
+
+**Verifies:** FR-005
+**Start state:** `NEW`
+
+| Step | Event                | Expected State | Expected Output                       |
+|------|----------------------|----------------|---------------------------------------|
+| 1    | `submit_message`     | `ACTIVE`       | Message accepted; response generated  |
+| 2    | `inactivity_timeout` | `IDLE`         | Session marked idle                   |
+| 3    | `close_session`      | `EXPIRED`      | Session terminated from IDLE          |
+
+**Transitions covered:** IDLE→EXPIRED (close_session). (Reuses NEW→ACTIVE and ACTIVE→IDLE already covered in TS-1.)
+
+---
+
+#### TS-7: Invalid Transition — Submit on EXPIRED Session
+
+**Verifies:** FR-009 (controlled error handling), NFR-003 (graceful degradation), edge case "session expired"
+**Start state:** `NEW`
+
+| Step | Event             | Expected State | Expected Output                                                |
+|------|-------------------|----------------|----------------------------------------------------------------|
+| 1    | `close_session`   | `EXPIRED`      | Session terminated                                             |
+| 2    | `submit_message`  | – (invalid)    | Controlled error: "Messages cannot be submitted on an EXPIRED session." Session remains `EXPIRED`. |
+
+**Transitions covered:** Invalid transition path — verifies the system returns a controlled error rather than crashing or accepting the request.
+
+---
+
+#### Coverage Summary
+
+| Valid Transition                                | Covered By |
+|-------------------------------------------------|------------|
+| `NEW` → `ACTIVE` (`submit_message`)             | TS-1       |
+| `NEW` → `ACTIVE` (`request_quiz`)               | TS-2       |
+| `NEW` → `IDLE` (`inactivity_timeout`)           | TS-3       |
+| `NEW` → `EXPIRED` (`session_timeout`)           | TS-5       |
+| `NEW` → `EXPIRED` (`close_session`)             | TS-4       |
+| `ACTIVE` → `ACTIVE` (`submit_message`)          | TS-1       |
+| `ACTIVE` → `ACTIVE` (`request_quiz`)            | TS-1       |
+| `ACTIVE` → `ACTIVE` (`submit_answer`)           | TS-1       |
+| `ACTIVE` → `IDLE` (`inactivity_timeout`)        | TS-1, TS-6 |
+| `ACTIVE` → `EXPIRED` (`session_timeout`)        | TS-2       |
+| `ACTIVE` → `EXPIRED` (`close_session`)          | TS-1       |
+| `IDLE` → `IDLE` (`inactivity_timeout`)          | TS-3       |
+| `IDLE` → `EXPIRED` (`session_timeout`)          | TS-3       |
+| `IDLE` → `EXPIRED` (`close_session`)            | TS-6       |
+| `IDLE` → `ACTIVE` (`resume_session`)            | TS-1       |
+| `EXPIRED` → `EXPIRED` (`inactivity_timeout`)    | TS-1       |
+| `EXPIRED` → `EXPIRED` (`session_timeout`)       | TS-1       |
+| Invalid transition (controlled error)           | TS-7       |
+
+All 17 valid transitions are exercised at least once → **all-transitions coverage achieved.**
+
+---
+
+AI assistance was used to transcribe hand-drawn tables into structured Markdown tables.
