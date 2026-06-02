@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import pytest
+from pydantic import ValidationError
 from models import UserSession, ChatMessage, QuizRequest
 
 
@@ -14,6 +15,39 @@ def test_created_at_is_set_automatically():
     after = datetime.utcnow()
     assert isinstance(s.created_at, datetime)
     assert before - timedelta(seconds=1) <= s.created_at <= after + timedelta(seconds=1)
+
+
+def test_last_activity_is_set_automatically():
+    before = datetime.utcnow()
+    s = UserSession()
+    after = datetime.utcnow()
+    assert isinstance(s.last_activity, datetime)
+    assert before - timedelta(seconds=1) <= s.last_activity <= after + timedelta(seconds=1)
+
+
+def test_user_id_defaults_to_anonymous():
+    s = UserSession()
+    assert s.user_id == "anonymous"
+
+
+def test_user_id_can_be_set():
+    s = UserSession(user_id="alice@hse.de")
+    assert s.user_id == "alice@hse.de"
+
+
+def test_empty_user_id_fails():
+    with pytest.raises(ValidationError):
+        UserSession.model_validate({"user_id": ""})
+
+
+def test_title_defaults_to_none():
+    s = UserSession()
+    assert s.title is None
+
+
+def test_title_can_be_set():
+    s = UserSession(title="Learning Python basics")
+    assert s.title == "Learning Python basics"
 
 
 def test_empty_lists_by_default():

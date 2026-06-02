@@ -7,7 +7,10 @@ from datetime import datetime
 class UserSession(SQLModel, table=True):
     """Represents a user session, which can have multiple chat messages and quiz requests associated with it."""
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(default="anonymous", index=True, min_length=1)
+    title: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_activity: datetime = Field(default_factory=datetime.utcnow)
 
     messages: List["ChatMessage"] = Relationship(back_populates="session")
     quiz_requests: List["QuizRequest"] = Relationship(back_populates="session")
