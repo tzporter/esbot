@@ -15,7 +15,7 @@ from models import (
     EvaluationResult
 )
 
-from repositories import SessionRepository
+from repositories.session_repository import SessionRepository
 
 
 # ==================================================
