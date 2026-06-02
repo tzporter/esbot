@@ -1,16 +1,29 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
-from database import init_db, get_session
-from ai_service import AIService
-from pydantic import BaseModel
+from contextlib import asynccontextmanager
 import json
 
-from models import ChatMessage, QuizItem, QuizRequest, SubmittedAnswer, UserSession, EvaluationResult
+from database import init_db, get_session
+from ai_service import AIService
+
+from models import (
+    UserSession,
+    ChatMessage,
+    QuizRequest,
+    QuizItem,
+    SubmittedAnswer,
+    EvaluationResult
+)
+
+from repositories import SessionRepository
 
 
-from contextlib import asynccontextmanager
+# ==================================================
+# INIT
+# ==================================================
 
 ai_provider = AIService()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,165 +31,243 @@ async def lifespan(app: FastAPI):
     print("Database initialized", flush=True)
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 
-class SubmitAnswerRequest(BaseModel):
+
+# ==================================================
+# HELPERS
+# ==================================================
+
+def get_repo(db: Session):
+    return SessionRepository(db)
+
+
+def safe_ai_call(fn, *args):
+    try:
+        return fn(*args)
+    except ConnectionError:
+        raise HTTPException(status_code=503, detail="AI service unavailable")
+
+
+# ==================================================
+# DTOs
+# ==================================================
+
+from pydantic import BaseModel
+
+
+class CreateSessionRequest(BaseModel):
+    user_id: str = "anonymous"
+    title: str | None = None
+
+
+class MessageRequest(BaseModel):
+    content: str
+
+
+class QuizRequestModel(BaseModel):
+    topic: str
+
+
+class AnswerRequest(BaseModel):
     user_answer: str
-    session_id: int
-
-def evaluate_with_retry(question: str, correct_answer: str, user_answer: str) -> dict:
-    last_error = None
-    for attempt in range(2):
-        try:
-            return ai_provider.evaluate_answer(question, correct_answer, user_answer)
-        except ConnectionError as e:
-            last_error = e
-    raise last_error
-
-def get_quiz_with_retry(topic: str) -> dict:
-    last_error = None
-    for attempt in range(2):
-        try:
-            return ai_provider.get_quiz(topic)
-        except ConnectionError as e:
-            last_error = e
-        except Exception as e:
-            if "Unstructured format" in str(e):
-                last_error = e
-                continue
-            raise e
-    raise last_error
 
 
-@app.get("/history")
-def get_history(session: Session = Depends(get_session)):
-    return session.exec(select(ChatMessage)).all()
-@app.post("/quiz-request")
-def request_quiz(request_data: dict, session: Session = Depends(get_session)):
-    topic = request_data.get("topic")
-    session_id = request_data.get("session_id")
-    if not topic or topic.strip() == "":
-        raise HTTPException(status_code=400, detail="Please provide a topic for the quiz.")
+# ==================================================
+# 1. CREATE SESSION
+# ==================================================
 
-    db_session = session.get(UserSession, session_id)
-    if not db_session:
+@app.post("/sessions")
+def create_session(
+    request: CreateSessionRequest,
+    db: Session = Depends(get_session)
+):
+
+    repo = get_repo(db)
+
+    session = repo.create(
+        user_id=request.user_id,
+        title=request.title
+    )
+
+    return session
+
+
+# ==================================================
+# 2. LIST SESSIONS
+# ==================================================
+
+@app.get("/sessions")
+def get_sessions(db: Session = Depends(get_session)):
+
+    repo = get_repo(db)
+
+    return repo.get_by_user("anonymous")   
+
+
+# ==================================================
+# 3. GET SESSION MESSAGES
+# ==================================================
+
+@app.get("/sessions/{session_id}/messages")
+def get_messages(
+    session_id: int,
+    db: Session = Depends(get_session)
+):
+
+    repo = get_repo(db)
+
+    session_obj = repo.get_by_id(session_id)
+
+    if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    try:
-        quiz_json = get_quiz_with_retry(topic)
+    return repo.get_messages(session_id)
 
-        if isinstance(quiz_json, dict) and quiz_json.get("status") == "error":
-             raise HTTPException(status_code=400, detail=quiz_json.get("message"))
 
-        quiz_request = QuizRequest(topic=topic, session_id=session_id)
-        session.add(quiz_request)
-        session.commit()
-        session.refresh(quiz_request)
+# ==================================================
+# 4. SEND MESSAGE
+# ==================================================
 
-        for quiz_item in quiz_json["quiz"]["questions"]:
-            question = quiz_item["question"]
-            answer = quiz_item["answer"]
-            new_quiz_item = QuizItem(question_text=question, correct_answer=answer, quiz_request_id=quiz_request.id)
-            session.add(new_quiz_item)
+@app.post("/sessions/{session_id}/messages")
+def send_message(
+    session_id: int,
+    request: MessageRequest,
+    db: Session = Depends(get_session)
+):
 
-        session.commit()
+    if not request.content.strip():
+        raise HTTPException(status_code=422, detail="Message cannot be empty")
 
-        return quiz_json
+    repo = get_repo(db)
 
-    except ConnectionError:
-        raise HTTPException(status_code=503, detail="AI service is currently unavailable")
-    except Exception as e:
-        detail = str(e)
-        if "safety" in detail and not detail.startswith("Request rejected:"):
-            detail = f"Request rejected: {detail}"
-        raise HTTPException(status_code=422, detail=detail)
+    session_obj = repo.get_by_id(session_id)
 
-@app.post("/chat")
-async def chat(message_data: dict, session: Session = Depends(get_session)):
-    content = message_data.get("content", "")
-    session_id = message_data.get("session_id")
-
-    if not content.strip():
-        raise HTTPException(status_code=400, detail="Message content cannot be empty")
-
-    db_session = session.get(UserSession, session_id)
-    if not db_session:
+    if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    user_msg = ChatMessage(content=content, role="user", session_id=session_id)
-    session.add(user_msg)
+    # user message
+    repo.append_message(
+        session_id=session_id,
+        content=request.content,
+        role="user"
+    )
+
+    # AI response
+    ai_response = safe_ai_call(
+        ai_provider.get_explanation,
+        request.content
+    )
+
+    # assistant message
+    repo.append_message(
+        session_id=session_id,
+        content=ai_response,
+        role="assistant"
+    )
+
+    return {"response": ai_response}
 
 
-    try:
-        response_content = ai_provider.get_explanation(content)
+# ==================================================
+# 5. QUIZ REQUEST (AI ONLY, NO REPO QUIZ TABLE USAGE REQUIRED)
+# ==================================================
 
-        # Check if response is JSON error
-        try:
-            resp_json = json.loads(response_content)
-            if resp_json.get("status") == "error":
-                raise HTTPException(status_code=400, detail=resp_json.get("message"))
-        except (json.JSONDecodeError, TypeError):
-            pass
+@app.post("/sessions/{session_id}/quiz")
+def generate_quiz(
+    session_id: int,
+    request: QuizRequestModel,
+    db: Session = Depends(get_session)
+):
 
-        assistant_msg = ChatMessage(content=response_content, role="assistant", session_id=session_id)
-    except ConnectionError:
-        raise HTTPException(status_code=503, detail="AI service is currently unavailable")
+    repo = get_repo(db)
 
-    session.add(assistant_msg)
-    session.commit()
-    session.refresh(assistant_msg)
-    return assistant_msg
+    session_obj = repo.get_by_id(session_id)
 
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    quiz_json = safe_ai_call(
+        ai_provider.get_quiz,
+        request.topic
+    )
+
+    return quiz_json
+
+
+# ==================================================
+# 6. ANSWER EVALUATION
+# ==================================================
 
 @app.post("/quiz-items/{quiz_item_id}/submit")
 def submit_answer(
     quiz_item_id: int,
-    request: SubmitAnswerRequest,
-    session: Session = Depends(get_session),
+    request: AnswerRequest,
+    db: Session = Depends(get_session)
 ):
-    # 1. Load the QuizItem
-    quiz_item = session.get(QuizItem, quiz_item_id)
-    if quiz_item is None:
-        raise HTTPException(status_code=404, detail="QuizItem not found")
 
-    # 2. Persist SubmittedAnswer before calling AI (so it always exists in DB)
+    quiz_item = db.get(QuizItem, quiz_item_id)
+
+    if not quiz_item:
+        raise HTTPException(status_code=404, detail="Quiz item not found")
+
     submitted = SubmittedAnswer(
         user_answer=request.user_answer,
-        quiz_item_id=quiz_item_id,
+        quiz_item_id=quiz_item_id
     )
-    session.add(submitted)
-    session.commit()
-    session.refresh(submitted)
 
-    # 3. Call AI with automatic retry on ConnectionError
-    try:
-        result = evaluate_with_retry(
-            question=quiz_item.question_text,
-            correct_answer=quiz_item.correct_answer,
-            user_answer=request.user_answer,
-        )
-    except ConnectionError:
-        raise HTTPException(status_code=503, detail="AI service is currently unavailable")
+    db.add(submitted)
+    db.commit()
+    db.refresh(submitted)
 
-    # 4a. Clarification path — no EvaluationResult written
+    result = safe_ai_call(
+        ai_provider.evaluate_answer,
+        quiz_item.question_text,
+        quiz_item.correct_answer,
+        request.user_answer
+    )
+
     if result.get("needs_clarification"):
         return {
             "submitted_answer_id": submitted.id,
             "needs_clarification": True,
-            "clarification_question": result["clarification_question"],
+            "clarification_question": result["clarification_question"]
         }
 
-    # 4b. Normal evaluation path — persist EvaluationResult
     evaluation = EvaluationResult(
         is_correct=result["is_correct"],
         feedback=result["feedback"],
-        submitted_answer_id=submitted.id,
+        submitted_answer_id=submitted.id
     )
-    session.add(evaluation)
-    session.commit()
+
+    db.add(evaluation)
+    db.commit()
 
     return {
         "submitted_answer_id": submitted.id,
         "is_correct": result["is_correct"],
-        "feedback": result["feedback"],
+        "feedback": result["feedback"]
     }
+
+
+# ==================================================
+# 7. DELETE SESSION
+# ==================================================
+
+@app.delete("/sessions/{session_id}")
+def delete_session(
+    session_id: int,
+    db: Session = Depends(get_session)
+):
+
+    repo = get_repo(db)
+
+    session_obj = repo.get_by_id(session_id)
+
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    repo.delete(session_id)
+
+    return {"message": "Session deleted"}
