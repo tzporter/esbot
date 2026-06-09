@@ -1,14 +1,12 @@
 from behave import given, when, then
-from fastapi.testclient import TestClient
 from unittest.mock import patch
-from main import app, ai_provider
+from main import ai_provider
 from models import QuizItem, QuizRequest, SubmittedAnswer, EvaluationResult
 from database import engine
 from sqlmodel import Session, SQLModel, select, delete
 
 SQLModel.metadata.create_all(engine)
 
-client = TestClient(app)
 
 
 # Given
@@ -77,7 +75,7 @@ def step_impl(context):
 @when('the student submits the answer "{user_answer}" to the quiz item')
 def step_impl(context, user_answer):
     quiz_item_id = getattr(context, "quiz_item_id", 1)
-    response = client.post(
+    response = context.client.post(
         f"/quiz-items/{quiz_item_id}/submit",
         json={"user_answer": user_answer, "session_id": getattr(context, "session_id", 1)},
     )

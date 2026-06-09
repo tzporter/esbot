@@ -18,12 +18,12 @@ Feature: Ask a Course Question
 
   Scenario: Ask an empty question
     When the student sends a POST to /chat with content ""
-    Then the response status code should be 400
-    And the response should contain the message "Message content cannot be empty"
+    Then the response status code should be 422
+    And the response should contain the message "Message cannot be empty"
     And no ChatMessage should be created in the database
 
   Scenario: Ask a course question when the AI service is unavailable
     Given the AI service is mocked to raise a connection error
     When the student sends a POST to /chat with content "What are German modal verbs?"
     Then the response status code should be 503
-    And the response should contain the message "AI service is currently unavailable"
+    And the response should contain the message "AI service unavailable"

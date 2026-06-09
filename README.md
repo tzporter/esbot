@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <img alt="CI" src="https://github.com/tzporter/esbot/actions/workflows/ci.yml/badge.svg">
   <a href="LICENSE"><img alt="Educational" src="https://img.shields.io/badge/status-educational-blue"></a>
   <a href="docs/"><img alt="Docs" src="https://img.shields.io/badge/docs-available-brightgreen"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>

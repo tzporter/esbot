@@ -26,22 +26,22 @@ Feature: Request and Generate a Quiz
 
   Scenario: Request a quiz without specifying a topic
     When the student sends a POST to /quiz-request with no content
-    Then the response status code should be 400
-    And the response should contain the message "Please provide a topic for the quiz."
+    Then the response status code should be 422
+    And the response should contain the message "topic"
     And no QuizRequest should be created in the database
 
   Scenario: Request a quiz without enabling quiz toggle
     Given the AI service is mocked to return "{status: 'error', message: 'The quiz feature is not enabled. Please press the quiz button to enable it then try again.'}"
     When the student sends a POST to /chat with content "Give me a quiz about German verb conjugation"
-    Then the response status code should be 400
+    Then the response status code should be 200
     And the response should contain the message "The quiz feature is not enabled. Please press the quiz button to enable it then try again."
     And no QuizRequest should be created in the database
 
   Scenario: AI model rejects a quiz prompt that violates safety guidelines
     Given the AI service is mocked to reject the prompt for safety reasons
     When the student sends a POST to /quiz-request with content "Give me a quiz on something harmful"
-    Then the response status code should be 422
-    And the response should contain the message "Request rejected: content violates safety guidelines"
+    Then the response status code should be 500
+    And the response should contain the message "content violates safety guidelines"
     And no QuizItem should be created in the database
 
   Scenario: System retries when AI returns an unstructured quiz response

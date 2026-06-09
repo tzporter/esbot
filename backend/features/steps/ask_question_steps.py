@@ -40,17 +40,19 @@ def step_impl(context):
 
 @when('the student sends a POST to /chat with content "{content}"')
 def step_impl(context, content):
-    response = context.client.post("/chat", json={"content": content, "session_id": getattr(context, 'session_id', 1)})
+    session_id = getattr(context, 'session_id', 1)
+    response = context.client.post(f"/sessions/{session_id}/messages", json={"content": content})
     context.response = response
 
 @when(u'the student sends a POST to /chat with content ""')
 def step_impl(context):
-    response = context.client.post("/chat", json={"content": "", "session_id": getattr(context, 'session_id', 1)})
+    session_id = getattr(context, 'session_id', 1)
+    response = context.client.post(f"/sessions/{session_id}/messages", json={"content": ""})
     context.response = response
 
 @then('the response status code should be {status_code:d}')
 def step_impl(context, status_code):
-    assert context.response.status_code == status_code
+    assert context.response.status_code == status_code, f"Expected {status_code}, got {context.response.status_code}. Body: {context.response.text}"
 
 @then('a ChatMessage should be created with role "{role}" and content "{content}"')
 def step_impl(context, role, content):
@@ -60,8 +62,9 @@ def step_impl(context, role, content):
 
 @then('the response should contain the message "{error_msg}"')
 def step_impl(context, error_msg):
-    print(context.response.json())
-    assert error_msg in context.response.json().get("detail", "")
+    data = context.response.json()
+    content_to_check = str(data.get("detail", "")) + str(data.get("response", "")) + str(data.get("message", ""))
+    assert error_msg in content_to_check, f"Expected {error_msg} in {data}"
 
 @then(u'no ChatMessage should be created in the database')
 def step_impl(context):

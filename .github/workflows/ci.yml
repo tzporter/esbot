@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r backend/requirements.txt
+
+      - name: Run Linters
+        run: |
+          ruff check .
+          bandit -r . -x ./tests,./.venv,./features
+
+      - name: Run Unit Tests
+        run: |
+          cd backend
+          pytest
+
+      - name: Run BDD Tests
+        run: |
+          cd backend
+          behave features/

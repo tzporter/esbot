@@ -1,4 +1,4 @@
-from models import UserSession, ChatMessage, QuizRequest, QuizItem
+from models import UserSession
 
 class ChatService:
     def __init__(self, session_repository, ai_service):

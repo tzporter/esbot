@@ -1,15 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
-import json
 
 from database import init_db, get_session
 from ai_service import AIService
 
 from models import (
-    UserSession,
-    ChatMessage,
-    QuizRequest,
     QuizItem,
     SubmittedAnswer,
     EvaluationResult
@@ -43,18 +40,24 @@ def get_repo(db: Session):
     return SessionRepository(db)
 
 
-def safe_ai_call(fn, *args):
-    try:
-        return fn(*args)
-    except ConnectionError:
+def safe_ai_call(fn, *args, max_retries=1):
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            return fn(*args)
+        except Exception as e:
+            last_error = e
+    
+    if isinstance(last_error, ConnectionError):
         raise HTTPException(status_code=503, detail="AI service unavailable")
+    else:
+        raise HTTPException(status_code=500, detail=str(last_error))
+
 
 
 # ==================================================
 # DTOs
 # ==================================================
-
-from pydantic import BaseModel
 
 
 class CreateSessionRequest(BaseModel):

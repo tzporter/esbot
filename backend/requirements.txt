@@ -8,3 +8,5 @@ behave
 openai
 numpy
 requests
+ruff
+bandit

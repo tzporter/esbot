@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from models import UserSession, ChatMessage, QuizRequest, QuizItem
+from models import UserSession
 from chat_service import ChatService
 
 class TestChatService:
