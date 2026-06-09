@@ -40,7 +40,7 @@ To strengthen ESBot's security and adhere to secure software development practic
 
 ### Evidence of Successful Run
 The workflow executed successfully on the `exercise-9` branch in 24 seconds. 
-![Successful CI Run](./image_0e53fd.jpg)
+![Successful CI Run](./pipeline-success.jpg)
 
 In CI, we use native `actions/setup-python` directly on the runner to save the overhead of building a Docker image on every single pull request, reducing our feedback loop time. Because both our Dockerfile and the CI runner use Python 3.11, and both install dependencies from `requirements.txt`, we ensure environmental parity. If CI fails natively but passes locally (or vice-versa), we should look closely at dependency drift.
 
