@@ -4,7 +4,9 @@ from models import QuizItem, SubmittedAnswer, UserSession, QuizRequest
 
 
 def test_quiz_item_creation():
-    item = QuizItem(question_text="Capital of Germany?", correct_answer="Berlin", quiz_request_id=1)
+    item = QuizItem(
+        question_text="Capital of Germany?", correct_answer="Berlin", quiz_request_id=1
+    )
     assert item.question_text == "Capital of Germany?"
     assert item.correct_answer == "Berlin"
     assert item.id is None
@@ -17,12 +19,16 @@ def test_no_answer_initially():
 
 def test_empty_question_text_rejected():
     with pytest.raises(ValidationError):
-        QuizItem.model_validate({"question_text": "", "correct_answer": "A", "quiz_request_id": 1})
+        QuizItem.model_validate(
+            {"question_text": "", "correct_answer": "A", "quiz_request_id": 1}
+        )
 
 
 def test_empty_correct_answer_rejected():
     with pytest.raises(ValidationError):
-        QuizItem.model_validate({"question_text": "Q?", "correct_answer": "", "quiz_request_id": 1})
+        QuizItem.model_validate(
+            {"question_text": "Q?", "correct_answer": "", "quiz_request_id": 1}
+        )
 
 
 def test_missing_question_text_rejected():
@@ -46,7 +52,11 @@ def test_item_links_to_quiz(db):
     db.commit()
     db.refresh(qr)
 
-    item = QuizItem(question_text="Capital of France?", correct_answer="Paris", quiz_request_id=qr.id)
+    item = QuizItem(
+        question_text="Capital of France?",
+        correct_answer="Paris",
+        quiz_request_id=qr.id,
+    )
     db.add(item)
     db.commit()
     db.refresh(item)

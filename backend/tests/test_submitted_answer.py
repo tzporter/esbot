@@ -35,7 +35,9 @@ def _make_item(db):
     db.commit()
     db.refresh(qr)
 
-    item = QuizItem(question_text="Largest planet?", correct_answer="Jupiter", quiz_request_id=qr.id)
+    item = QuizItem(
+        question_text="Largest planet?", correct_answer="Jupiter", quiz_request_id=qr.id
+    )
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -61,7 +63,9 @@ def test_full_chain_item_to_answer_to_eval(db):
     db.commit()
     db.refresh(ans)
 
-    ev = EvaluationResult(is_correct=True, feedback="Correct!", submitted_answer_id=ans.id)
+    ev = EvaluationResult(
+        is_correct=True, feedback="Correct!", submitted_answer_id=ans.id
+    )
     db.add(ev)
     db.commit()
     db.refresh(ans)

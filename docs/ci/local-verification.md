@@ -9,5 +9,5 @@ docker compose run --rm backend behave features/
 
 # Run linters
 docker compose run --rm backend ruff check .
-docker compose run --rm backend bandit -r . -x ./tests,./.venv
+docker compose run --rm backend bandit -r . -x ./tests,./.venv,./features
 ```

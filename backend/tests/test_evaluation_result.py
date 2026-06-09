@@ -26,7 +26,9 @@ def test_missing_feedback_rejected():
 
 def test_empty_feedback_rejected():
     with pytest.raises(ValidationError):
-        EvaluationResult.model_validate({"is_correct": True, "feedback": "", "submitted_answer_id": 1})
+        EvaluationResult.model_validate(
+            {"is_correct": True, "feedback": "", "submitted_answer_id": 1}
+        )
 
 
 def test_missing_submitted_answer_id_rejected():
@@ -45,7 +47,11 @@ def test_eval_links_back_to_answer(db):
     db.commit()
     db.refresh(qr)
 
-    item = QuizItem(question_text="DNA stands for?", correct_answer="Deoxyribonucleic acid", quiz_request_id=qr.id)
+    item = QuizItem(
+        question_text="DNA stands for?",
+        correct_answer="Deoxyribonucleic acid",
+        quiz_request_id=qr.id,
+    )
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -55,7 +61,9 @@ def test_eval_links_back_to_answer(db):
     db.commit()
     db.refresh(ans)
 
-    ev = EvaluationResult(is_correct=True, feedback="Exactly right", submitted_answer_id=ans.id)
+    ev = EvaluationResult(
+        is_correct=True, feedback="Exactly right", submitted_answer_id=ans.id
+    )
     db.add(ev)
     db.commit()
     db.refresh(ev)

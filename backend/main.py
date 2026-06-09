@@ -6,11 +6,7 @@ from contextlib import asynccontextmanager
 from database import init_db, get_session
 from ai_service import AIService
 
-from models import (
-    QuizItem,
-    SubmittedAnswer,
-    EvaluationResult
-)
+from models import QuizItem, SubmittedAnswer, EvaluationResult
 
 from repositories.session_repository import SessionRepository
 
@@ -36,6 +32,7 @@ app = FastAPI(lifespan=lifespan)
 # HELPERS
 # ==================================================
 
+
 def get_repo(db: Session):
     return SessionRepository(db)
 
@@ -47,12 +44,11 @@ def safe_ai_call(fn, *args, max_retries=1):
             return fn(*args)
         except Exception as e:
             last_error = e
-    
+
     if isinstance(last_error, ConnectionError):
         raise HTTPException(status_code=503, detail="AI service unavailable")
     else:
         raise HTTPException(status_code=500, detail=str(last_error))
-
 
 
 # ==================================================
@@ -81,18 +77,13 @@ class AnswerRequest(BaseModel):
 # 1. CREATE SESSION
 # ==================================================
 
+
 @app.post("/sessions")
-def create_session(
-    request: CreateSessionRequest,
-    db: Session = Depends(get_session)
-):
+def create_session(request: CreateSessionRequest, db: Session = Depends(get_session)):
 
     repo = get_repo(db)
 
-    session = repo.create(
-        user_id=request.user_id,
-        title=request.title
-    )
+    session = repo.create(user_id=request.user_id, title=request.title)
 
     return session
 
@@ -101,23 +92,22 @@ def create_session(
 # 2. LIST SESSIONS
 # ==================================================
 
+
 @app.get("/sessions")
 def get_sessions(db: Session = Depends(get_session)):
 
     repo = get_repo(db)
 
-    return repo.get_by_user("anonymous")   
+    return repo.get_by_user("anonymous")
 
 
 # ==================================================
 # 3. GET SESSION MESSAGES
 # ==================================================
 
+
 @app.get("/sessions/{session_id}/messages")
-def get_messages(
-    session_id: int,
-    db: Session = Depends(get_session)
-):
+def get_messages(session_id: int, db: Session = Depends(get_session)):
 
     repo = get_repo(db)
 
@@ -133,11 +123,10 @@ def get_messages(
 # 4. SEND MESSAGE
 # ==================================================
 
+
 @app.post("/sessions/{session_id}/messages")
 def send_message(
-    session_id: int,
-    request: MessageRequest,
-    db: Session = Depends(get_session)
+    session_id: int, request: MessageRequest, db: Session = Depends(get_session)
 ):
 
     if not request.content.strip():
@@ -151,24 +140,13 @@ def send_message(
         raise HTTPException(status_code=404, detail="Session not found")
 
     # user message
-    repo.append_message(
-        session_id=session_id,
-        content=request.content,
-        role="user"
-    )
+    repo.append_message(session_id=session_id, content=request.content, role="user")
 
     # AI response
-    ai_response = safe_ai_call(
-        ai_provider.get_explanation,
-        request.content
-    )
+    ai_response = safe_ai_call(ai_provider.get_explanation, request.content)
 
     # assistant message
-    repo.append_message(
-        session_id=session_id,
-        content=ai_response,
-        role="assistant"
-    )
+    repo.append_message(session_id=session_id, content=ai_response, role="assistant")
 
     return {"response": ai_response}
 
@@ -177,11 +155,10 @@ def send_message(
 # 5. QUIZ REQUEST (AI ONLY, NO REPO QUIZ TABLE USAGE REQUIRED)
 # ==================================================
 
+
 @app.post("/sessions/{session_id}/quiz")
 def generate_quiz(
-    session_id: int,
-    request: QuizRequestModel,
-    db: Session = Depends(get_session)
+    session_id: int, request: QuizRequestModel, db: Session = Depends(get_session)
 ):
 
     repo = get_repo(db)
@@ -191,10 +168,7 @@ def generate_quiz(
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    quiz_json = safe_ai_call(
-        ai_provider.get_quiz,
-        request.topic
-    )
+    quiz_json = safe_ai_call(ai_provider.get_quiz, request.topic)
 
     return quiz_json
 
@@ -203,11 +177,10 @@ def generate_quiz(
 # 6. ANSWER EVALUATION
 # ==================================================
 
+
 @app.post("/quiz-items/{quiz_item_id}/submit")
 def submit_answer(
-    quiz_item_id: int,
-    request: AnswerRequest,
-    db: Session = Depends(get_session)
+    quiz_item_id: int, request: AnswerRequest, db: Session = Depends(get_session)
 ):
 
     quiz_item = db.get(QuizItem, quiz_item_id)
@@ -216,8 +189,7 @@ def submit_answer(
         raise HTTPException(status_code=404, detail="Quiz item not found")
 
     submitted = SubmittedAnswer(
-        user_answer=request.user_answer,
-        quiz_item_id=quiz_item_id
+        user_answer=request.user_answer, quiz_item_id=quiz_item_id
     )
 
     db.add(submitted)
@@ -228,20 +200,20 @@ def submit_answer(
         ai_provider.evaluate_answer,
         quiz_item.question_text,
         quiz_item.correct_answer,
-        request.user_answer
+        request.user_answer,
     )
 
     if result.get("needs_clarification"):
         return {
             "submitted_answer_id": submitted.id,
             "needs_clarification": True,
-            "clarification_question": result["clarification_question"]
+            "clarification_question": result["clarification_question"],
         }
 
     evaluation = EvaluationResult(
         is_correct=result["is_correct"],
         feedback=result["feedback"],
-        submitted_answer_id=submitted.id
+        submitted_answer_id=submitted.id,
     )
 
     db.add(evaluation)
@@ -250,7 +222,7 @@ def submit_answer(
     return {
         "submitted_answer_id": submitted.id,
         "is_correct": result["is_correct"],
-        "feedback": result["feedback"]
+        "feedback": result["feedback"],
     }
 
 
@@ -258,11 +230,9 @@ def submit_answer(
 # 7. DELETE SESSION
 # ==================================================
 
+
 @app.delete("/sessions/{session_id}")
-def delete_session(
-    session_id: int,
-    db: Session = Depends(get_session)
-):
+def delete_session(session_id: int, db: Session = Depends(get_session)):
 
     repo = get_repo(db)
 

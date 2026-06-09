@@ -22,7 +22,9 @@ def test_last_activity_is_set_automatically():
     s = UserSession()
     after = datetime.utcnow()
     assert isinstance(s.last_activity, datetime)
-    assert before - timedelta(seconds=1) <= s.last_activity <= after + timedelta(seconds=1)
+    assert (
+        before - timedelta(seconds=1) <= s.last_activity <= after + timedelta(seconds=1)
+    )
 
 
 def test_user_id_defaults_to_anonymous():

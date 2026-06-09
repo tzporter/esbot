@@ -6,6 +6,7 @@ from datetime import datetime
 
 class UserSession(SQLModel, table=True):
     """Represents a user session, which can have multiple chat messages and quiz requests associated with it."""
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(default="anonymous", index=True, min_length=1)
     title: Optional[str] = Field(default=None)
@@ -32,6 +33,7 @@ class UserSession(SQLModel, table=True):
 
 class ChatMessage(SQLModel, table=True):
     """Represents a chat message associated with a user session."""
+
     id: Optional[int] = Field(default=None, primary_key=True)
     content: str = Field(nullable=False, min_length=1)
     role: str = Field(default="user")
@@ -50,6 +52,7 @@ class ChatMessage(SQLModel, table=True):
 
 class QuizRequest(SQLModel, table=True):
     """Represents a quiz request associated with a user session."""
+
     id: Optional[int] = Field(default=None, primary_key=True)
     topic: str = Field(nullable=False, min_length=1)
     difficulty: str = Field(default="medium")
@@ -88,7 +91,9 @@ class QuizItem(SQLModel, table=True):
     quiz_request_id: int = Field(foreign_key="quizrequest.id")
     quiz_request: QuizRequest = Relationship(back_populates="quiz_items")
 
-    submitted_answer: Optional["SubmittedAnswer"] = Relationship(back_populates="quiz_item")
+    submitted_answer: Optional["SubmittedAnswer"] = Relationship(
+        back_populates="quiz_item"
+    )
 
     def submit(self, user_answer: str) -> "SubmittedAnswer":
         if self.id is None:
@@ -105,7 +110,9 @@ class SubmittedAnswer(SQLModel, table=True):
     quiz_item_id: int = Field(foreign_key="quizitem.id")
     quiz_item: QuizItem = Relationship(back_populates="submitted_answer")
 
-    evaluation: Optional["EvaluationResult"] = Relationship(back_populates="submitted_answer")
+    evaluation: Optional["EvaluationResult"] = Relationship(
+        back_populates="submitted_answer"
+    )
 
     def evaluate(self, is_correct: bool, feedback: str) -> "EvaluationResult":
         if self.id is None:

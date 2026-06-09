@@ -16,24 +16,25 @@ Format your response as JSON with the following structure:
   }
 }"""
 
+
 class AIService:
     def __init__(self):
         self.api_key = os.getenv("GROQ_API_KEY", "mock_key")
         self.client = OpenAI(
-            base_url="https://api.groq.com/openai/v1",
-            api_key=self.api_key
+            base_url="https://api.groq.com/openai/v1", api_key=self.api_key
         )
 
     def get_explanation(self, prompt: str):
         system_prompt = """You are ESBot, a helpful learning assistant.
 When asked a question, you should respond with a clear and concise explanation.
-If a user requests a quiz, respond with the JSON: { "status": "error", "message": "The quiz feature is not enabled. Please press the quiz button to enable it then try again."}.
+If a user requests a quiz, respond with the JSON:
+{ "status": "error", "message": "The quiz feature is not enabled. Please press the quiz button to enable it." }.
                 """
         try:
             chat_completion = self.client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
                 model="llama3-8b-8192",
             )
@@ -109,13 +110,16 @@ If the answer is too ambiguous to evaluate, respond with:
         except Exception as e:
             if isinstance(e, (ValueError,)):
                 raise
+
     def get_quiz(self, topic: str):
         try:
             response = self.client.chat.completions.create(
                 messages=[
-                    {"role": "system",
-                     "content": get_quiz_template},
-                    {"role": "user", "content": f"Generate a quiz on the topic: {topic}"}
+                    {"role": "system", "content": get_quiz_template},
+                    {
+                        "role": "user",
+                        "content": f"Generate a quiz on the topic: {topic}",
+                    },
                 ],
                 model="llama3-8b-8192",
             )

@@ -13,7 +13,6 @@ from models import UserSession, ChatMessage
 # directly. The repository receives an open database Session via its
 # constructor (dependency injection) and reuses it for every operation.
 class SessionRepository:
-
     def __init__(self, db: Session):
         self.db = db
 

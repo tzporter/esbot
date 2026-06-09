@@ -23,7 +23,9 @@ def test_easy_and_hard_difficulty_accepted():
 
 def test_invalid_difficulty_rejected():
     with pytest.raises(ValidationError):
-        QuizRequest.model_validate({"topic": "X", "difficulty": "nightmare", "session_id": 1})
+        QuizRequest.model_validate(
+            {"topic": "X", "difficulty": "nightmare", "session_id": 1}
+        )
 
 
 def test_empty_topic_rejected():
@@ -66,8 +68,16 @@ def test_quiz_collects_items(db):
     db.commit()
     db.refresh(qr)
 
-    db.add(QuizItem(question_text="What is H2O?", correct_answer="Water", quiz_request_id=qr.id))
-    db.add(QuizItem(question_text="What is NaCl?", correct_answer="Salt", quiz_request_id=qr.id))
+    db.add(
+        QuizItem(
+            question_text="What is H2O?", correct_answer="Water", quiz_request_id=qr.id
+        )
+    )
+    db.add(
+        QuizItem(
+            question_text="What is NaCl?", correct_answer="Salt", quiz_request_id=qr.id
+        )
+    )
     db.commit()
     db.refresh(qr)
 

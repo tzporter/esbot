@@ -42,7 +42,9 @@ def test_missing_session_id_fails():
 
 def test_invalid_role_rejected():
     with pytest.raises(ValidationError):
-        ChatMessage.model_validate({"content": "hi", "role": "moderator", "session_id": 1})
+        ChatMessage.model_validate(
+            {"content": "hi", "role": "moderator", "session_id": 1}
+        )
 
 
 def test_message_belongs_to_session(db):

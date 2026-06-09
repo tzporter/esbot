@@ -15,6 +15,7 @@ def repo(db):
 
 # create
 
+
 def test_create_persists_session_and_assigns_id(repo, db):
     session = repo.create(user_id="alice")
 
@@ -37,6 +38,7 @@ def test_create_defaults_title_to_none(repo):
 
 # get_by_id
 
+
 def test_get_by_id_returns_existing_session(repo):
     created = repo.create(user_id="alice")
     found = repo.get_by_id(created.id)
@@ -49,6 +51,7 @@ def test_get_by_id_returns_none_for_unknown_id(repo):
 
 
 # get_by_user
+
 
 def test_get_by_user_returns_only_that_users_sessions(repo):
     repo.create(user_id="alice")
@@ -69,6 +72,7 @@ def test_get_by_user_returns_empty_list_for_unknown_user(repo):
 
 
 # append_message
+
 
 def test_append_message_persists_message(repo, db):
     session = repo.create(user_id="alice")
@@ -111,6 +115,7 @@ def test_append_message_to_unknown_session_raises(repo):
 
 # get_messages
 
+
 def test_get_messages_returns_messages_in_chronological_order(repo):
     session = repo.create(user_id="alice")
     repo.append_message(session.id, content="first", role="user")
@@ -137,6 +142,7 @@ def test_get_messages_isolates_sessions(repo):
 
 
 # update
+
 
 def test_update_changes_title(repo):
     session = repo.create(user_id="alice", title="old")
@@ -172,6 +178,7 @@ def test_update_unknown_session_raises(repo):
 
 
 # delete
+
 
 def test_delete_removes_session(repo):
     session = repo.create(user_id="alice")

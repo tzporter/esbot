@@ -1,11 +1,13 @@
 [tool.ruff]
-line-length = 88
+line-length = 120
+
+[tool.ruff.lint]
 select = ["E", "F", "W"]
 exclude = [".venv", "__pycache__", "migrations"]
 
-[tool.ruff.per-file-ignores]
-"features/**/*.py" = ["F811"]
+[tool.ruff.lint.per-file-ignores]
+"backend/features/**/*.py" = ["F811"]
 
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", "features"]
+exclude_dirs = ["tests", "backend/tests", ".venv", "features", "backend/features"]
 skips = []

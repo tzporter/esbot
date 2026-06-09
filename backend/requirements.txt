@@ -3,7 +3,7 @@ uvicorn
 sqlmodel
 pytest
 psycopg2-binary
-httpx
+httpx2
 behave
 openai
 numpy
