@@ -25,6 +25,11 @@ We intentionally mock the AI provider to prevent making live, non-deterministic 
 ## 5. Parity with Local
 Locally, we use `docker compose run --rm backend <command>` (as documented in `local-verification.md`) to verify our changes within our Docker container.
 
+### Exercise 9.2 Verification Proof
+The newly isolated Bandit SAST security gate successfully ran on the GitHub Actions runner. As documented below, the execution finished in 24 seconds with a green status badge, verifying the repository's structural security policies before integration.
+
+![Successful CI Run](./pipeline-success.jpg)
+
 In CI, we use native `actions/setup-python` directly on the runner to save the overhead of building a Docker image on every single pull request, reducing our feedback loop time. Because both our Dockerfile and the CI runner use Python 3.11, and both install dependencies from `requirements.txt`, we ensure environmental parity. If CI fails natively but passes locally (or vice-versa), we should look closely at dependency drift.
 
 
