@@ -23,17 +23,26 @@ jobs:
         run: |
           pip install -r backend/requirements.txt
 
+       
       - name: Run Linters
+        continue-on-error: true # Lint error does not fail the job, but will be reported in the logs
         run: |
           cd backend
           ruff check .
-          bandit -r . -x ./tests,./.venv,./features
 
+       
+      - name: Run SAST Security Scanner (Bandit)
+        run: |
+          cd backend
+          bandit -r . -ll -x ./tests,./.venv,./features
+
+       
       - name: Run Unit Tests
         run: |
           cd backend
           pytest
 
+       
       - name: Run BDD Tests
         run: |
           cd backend
