@@ -25,10 +25,22 @@ We intentionally mock the AI provider to prevent making live, non-deterministic 
 ## 5. Parity with Local
 Locally, we use `docker compose run --rm backend <command>` (as documented in `local-verification.md`) to verify our changes within our Docker container.
 
-### Exercise 9.2 Verification Proof
-The newly isolated Bandit SAST security gate successfully ran on the GitHub Actions runner. As documented below, the execution finished in 24 seconds with a green status badge, verifying the repository's structural security policies before integration.
+## Exercise 9.2 Enhancements
 
-![Successful CI Run](./pipeline-success.jpg)
+### Integrated Tool: Bandit  
+To strengthen ESBot's security and adhere to secure software development practices, we isolated and enhanced **Bandit** as an independent Static Application Security Testing (SAST) step in our CI pipeline.
+
+### Architectural Rationale & Concrete Benefits
+* **Token & Secret Protection:** As highlighted in the exercise pitfalls, committing API keys or LLM tokens is a major risk. Bandit automatically scans our code (`backend/`) on every push to detect hardcoded credentials or unsafe functions before integration.
+* **Separation of Concerns:** Moving Bandit out of the generic linter step ensures that trivial formatting issues (checked by Ruff) do not mask or block critical security vulnerability scans.
+
+### Value vs. Cost Analysis
+* **Cost (Low):** Running Bandit takes less than 5 seconds (as seen in our 24s total execution time), consuming minimal GitHub Actions free-tier limits.
+* **Value (High):** Automated security gates reduce post-deployment vulnerability fixes and prevent supply-chain flaws.
+
+### Evidence of Successful Run
+The workflow executed successfully on the `exercise-9` branch in 24 seconds. 
+![Successful CI Run](./image_0e53fd.jpg)
 
 In CI, we use native `actions/setup-python` directly on the runner to save the overhead of building a Docker image on every single pull request, reducing our feedback loop time. Because both our Dockerfile and the CI runner use Python 3.11, and both install dependencies from `requirements.txt`, we ensure environmental parity. If CI fails natively but passes locally (or vice-versa), we should look closely at dependency drift.
 
