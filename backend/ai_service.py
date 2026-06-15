@@ -19,12 +19,21 @@ Format your response as JSON with the following structure:
 
 class AIService:
     def __init__(self):
+
+        #LLM_PROVIDER env var can be set to "mock" to enable mock mode, which returns hardcoded responses without calling the real API. This is useful for testing and development without incurring API costs or needing network access.
+        self.mock_mode = os.getenv("LLM_PROVIDER", "real") == "mock"
+
+
         self.api_key = os.getenv("GROQ_API_KEY", "mock_key")
         self.client = OpenAI(
             base_url="https://api.groq.com/openai/v1", api_key=self.api_key
         )
 
     def get_explanation(self, prompt: str):
+
+        if self.mock_mode:
+            return f"[Mock Response] This is a deterministic explanation for your prompt: '{prompt}'"
+        
         system_prompt = """You are ESBot, a helpful learning assistant.
 When asked a question, you should respond with a clear and concise explanation.
 If a user requests a quiz, respond with the JSON:
@@ -54,6 +63,11 @@ If a user requests a quiz, respond with the JSON:
           {"is_correct": bool, "feedback": str}
           {"needs_clarification": True, "clarification_question": str}
         """
+
+        if self.mock_mode:
+            # Scenario A: Clear answer evaluation
+            return {"is_correct": True, "feedback": f"[Mock Feedback] Great job! Your answer '{user_answer}' is correct."}
+        
         system_prompt = """You are ESBot, a language learning assistant that evaluates student answers.
 
 You must respond ONLY with a valid JSON object. No extra text, no markdown, no explanation outside the JSON.
@@ -112,6 +126,16 @@ If the answer is too ambiguous to evaluate, respond with:
                 raise
 
     def get_quiz(self, topic: str):
+        if self.mock_mode:
+            return {
+                "quiz": {
+                    "topic": topic,
+                    "questions": [
+                        { "question": "What is 2+2?", "answer": "4" }
+                    ]
+                }
+            }
+        
         try:
             response = self.client.chat.completions.create(
                 messages=[

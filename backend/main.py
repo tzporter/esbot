@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlmodel import Session
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from database import init_db, get_session
 from ai_service import AIService
 
-from models import QuizItem, SubmittedAnswer, EvaluationResult
+from models import QuizItem, QuizRequest, SubmittedAnswer, EvaluationResult
 
 from repositories.session_repository import SessionRepository
 
@@ -73,12 +73,18 @@ class AnswerRequest(BaseModel):
     user_answer: str
 
 
+api_router = APIRouter(prefix="/api/v1")
+
+@api_router.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 # ==================================================
 # 1. CREATE SESSION
 # ==================================================
 
 
-@app.post("/sessions")
+@api_router.post("/sessions")
 def create_session(request: CreateSessionRequest, db: Session = Depends(get_session)):
 
     repo = get_repo(db)
@@ -93,7 +99,7 @@ def create_session(request: CreateSessionRequest, db: Session = Depends(get_sess
 # ==================================================
 
 
-@app.get("/sessions")
+@api_router.get("/sessions")
 def get_sessions(db: Session = Depends(get_session)):
 
     repo = get_repo(db)
@@ -106,7 +112,7 @@ def get_sessions(db: Session = Depends(get_session)):
 # ==================================================
 
 
-@app.get("/sessions/{session_id}/messages")
+@api_router.get("/sessions/{session_id}/messages")
 def get_messages(session_id: int, db: Session = Depends(get_session)):
 
     repo = get_repo(db)
@@ -124,7 +130,7 @@ def get_messages(session_id: int, db: Session = Depends(get_session)):
 # ==================================================
 
 
-@app.post("/sessions/{session_id}/messages")
+@api_router.post("/sessions/{session_id}/messages")
 def send_message(
     session_id: int, request: MessageRequest, db: Session = Depends(get_session)
 ):
@@ -156,29 +162,41 @@ def send_message(
 # ==================================================
 
 
-@app.post("/sessions/{session_id}/quiz")
+@api_router.post("/sessions/{session_id}/quiz")
 def generate_quiz(
     session_id: int, request: QuizRequestModel, db: Session = Depends(get_session)
 ):
-
     repo = get_repo(db)
-
     session_obj = repo.get_by_id(session_id)
 
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    # 1. Fetch the quiz JSON structure from the AI or Mock service
     quiz_json = safe_ai_call(ai_provider.get_quiz, request.topic)
 
-    return quiz_json
+    # 2. Delegate database persistence to the repository layer by passing the session object
+    raw_questions = quiz_json.get("quiz", {}).get("questions", [])
+    saved_questions = repo.save_generated_quiz(
+        session_obj=session_obj,  # Fixed: Passing the database object directly
+        topic=request.topic, 
+        questions=raw_questions
+    )
 
+    # 3. Return the response containing database-persisted QuizItem IDs
+    return {
+        "quiz": {
+            "topic": quiz_json.get("quiz", {}).get("topic", request.topic),
+            "questions": saved_questions
+        }
+    }
 
 # ==================================================
 # 6. ANSWER EVALUATION
 # ==================================================
 
 
-@app.post("/quiz-items/{quiz_item_id}/submit")
+@api_router.post("/quiz-items/{quiz_item_id}/submit")
 def submit_answer(
     quiz_item_id: int, request: AnswerRequest, db: Session = Depends(get_session)
 ):
@@ -231,7 +249,7 @@ def submit_answer(
 # ==================================================
 
 
-@app.delete("/sessions/{session_id}")
+@api_router.delete("/sessions/{session_id}")
 def delete_session(session_id: int, db: Session = Depends(get_session)):
 
     repo = get_repo(db)
@@ -244,3 +262,6 @@ def delete_session(session_id: int, db: Session = Depends(get_session)):
     repo.delete(session_id)
 
     return {"message": "Session deleted"}
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(api_router)

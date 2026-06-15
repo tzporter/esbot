@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from sqlmodel import Session, select
 
-from models import UserSession, ChatMessage
+from models import UserSession, ChatMessage, QuizItem, QuizRequest, SubmittedAnswer, EvaluationResult
 
 
 # Data-access layer for UserSession and its ChatMessages.
@@ -106,3 +106,43 @@ class SessionRepository:
 
         self.db.delete(session)
         self.db.commit()
+
+    def save_generated_quiz(
+        self, session_obj: UserSession, topic: str, questions: List[dict]
+    ) -> List[dict]:
+        # Persist a parent QuizRequest and its associated QuizItems.
+        #
+        # Uses the fully loaded UserSession object to maintain clean relationship 
+        # mapping and prevent SQLite from dropping the foreign key constraint on commit.
+        
+        # 1. Create and persist the parent QuizRequest using the object relationship
+        quiz_request = QuizRequest(
+            topic=topic,
+            difficulty="medium",
+            session=session_obj  # Fixed: Pass the whole object instead of just session_id
+        )
+        self.db.add(quiz_request)
+        self.db.commit()
+        self.db.refresh(quiz_request)
+
+        saved_questions = []
+
+        # 2. Loop through the generated questions and persist them as QuizItems
+        for q in questions:
+            db_quiz_item = QuizItem(
+                question_text=q["question"],
+                correct_answer=q["answer"],
+                quiz_request=quiz_request  # Best Practice: Pass the object relationship here too
+            )
+            self.db.add(db_quiz_item)
+            self.db.commit()
+            self.db.refresh(db_quiz_item)
+
+            # Append metadata with database IDs for client/Postman visibility
+            saved_questions.append({
+                "id": db_quiz_item.id,
+                "question": db_quiz_item.question_text,
+                "answer": db_quiz_item.correct_answer
+            })
+
+        return saved_questions
