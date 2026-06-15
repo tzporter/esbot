@@ -40,17 +40,17 @@ def client_fixture():
 
 
 def test_create_and_list_sessions(client: TestClient):
-    # Test creating a session
+    # Test creating a session - Updated with /api/v1 prefix
     response = client.post(
-        "/sessions", json={"user_id": "anonymous", "title": "Test Session"}
+        "/api/v1/sessions", json={"user_id": "anonymous", "title": "Test Session"}
     )
     assert response.status_code == 200
     session_data = response.json()
     assert session_data["title"] == "Test Session"
     session_id = session_data["id"]
 
-    # Test listing sessions
-    response = client.get("/sessions")
+    # Test listing sessions - Updated with /api/v1 prefix and explicit user filter if needed
+    response = client.get("/api/v1/sessions?user_id=anonymous")
     assert response.status_code == 200
     sessions = response.json()
     assert len(sessions) == 1
@@ -60,20 +60,20 @@ def test_create_and_list_sessions(client: TestClient):
 @patch("main.ai_provider.get_explanation")
 def test_chat_messages(mock_get_explanation, client: TestClient):
     mock_get_explanation.return_value = "hello, user!"
-    # Create a session first
-    response = client.post("/sessions", json={"user_id": "anonymous"})
+    # Create a session first - Updated with /api/v1 prefix
+    response = client.post("/api/v1/sessions", json={"user_id": "anonymous"})
     session_id = response.json()["id"]
 
-    # Post a message
+    # Post a message - Updated with /api/v1 prefix
     response = client.post(
-        f"/sessions/{session_id}/messages", json={"content": "Hi there!"}
+        f"/api/v1/sessions/{session_id}/messages", json={"content": "Hi there!"}
     )
     assert response.status_code == 200
     data = response.json()
     assert "response" in data
 
-    # Retrieve messages
-    response = client.get(f"/sessions/{session_id}/messages")
+    # Retrieve messages - Updated with /api/v1 prefix
+    response = client.get(f"/api/v1/sessions/{session_id}/messages")
     assert response.status_code == 200
     messages = response.json()
     assert len(messages) == 2  # 1 user message + 1 assistant message
@@ -83,14 +83,14 @@ def test_chat_messages(mock_get_explanation, client: TestClient):
 
 
 def test_delete_session(client: TestClient):
-    # Create a session
-    response = client.post("/sessions", json={"user_id": "anonymous"})
+    # Create a session - Updated with /api/v1 prefix
+    response = client.post("/api/v1/sessions", json={"user_id": "anonymous"})
     session_id = response.json()["id"]
 
-    # Delete the session
-    response = client.delete(f"/sessions/{session_id}")
+    # Delete the session - Updated with /api/v1 prefix
+    response = client.delete(f"/api/v1/sessions/{session_id}")
     assert response.status_code == 200
 
-    # Verify it's deleted
-    response = client.get("/sessions")
+    # Verify it's deleted - Updated with /api/v1 prefix
+    response = client.get("/api/v1/sessions?user_id=anonymous")
     assert len(response.json()) == 0
