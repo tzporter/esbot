@@ -54,7 +54,7 @@ def step_impl(context):
 def step_impl(context, content):
     session_id = getattr(context, "session_id", 1)
     response = context.client.post(
-        f"/sessions/{session_id}/messages", json={"content": content}
+        f"/api/v1/sessions/{session_id}/messages", json={"content": content}
     )
     context.response = response
 
@@ -63,7 +63,7 @@ def step_impl(context, content):
 def step_impl(context):
     session_id = getattr(context, "session_id", 1)
     response = context.client.post(
-        f"/sessions/{session_id}/messages", json={"content": ""}
+        f"/api/v1/sessions/{session_id}/messages", json={"content": ""}
     )
     context.response = response
 

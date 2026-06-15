@@ -91,7 +91,7 @@ def step_impl(context):
 def step_impl(context, user_answer):
     quiz_item_id = getattr(context, "quiz_item_id", 1)
     response = context.client.post(
-        f"/quiz-items/{quiz_item_id}/submit",
+        f"/api/v1/quiz-items/{quiz_item_id}/submit",
         json={
             "user_answer": user_answer,
             "session_id": getattr(context, "session_id", 1),

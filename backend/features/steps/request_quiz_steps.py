@@ -51,14 +51,14 @@ def step_impl(context, response):
 def step_impl(context, content):
     session_id = getattr(context, "session_id", 1)
     context.response = context.client.post(
-        f"/sessions/{session_id}/quiz", json={"topic": str(content)}
+        f"/api/v1/sessions/{session_id}/quiz", json={"topic": str(content)}
     )
 
 
 @when("the student sends a POST to /quiz-request with no content")
 def step_impl(context):
     session_id = getattr(context, "session_id", 1)
-    context.response = context.client.post(f"/sessions/{session_id}/quiz", json={})
+    context.response = context.client.post(f"/api/v1/sessions/{session_id}/quiz", json={})
 
 
 @then('a QuizRequest should be created with topic "{topic}"')
