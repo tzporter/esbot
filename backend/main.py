@@ -100,11 +100,11 @@ def create_session(request: CreateSessionRequest, db: Session = Depends(get_sess
 
 
 @api_router.get("/sessions")
-def get_sessions(db: Session = Depends(get_session)):
+def get_sessions(user_id: str = "anonymous", db: Session = Depends(get_session)):
 
     repo = get_repo(db)
 
-    return repo.get_by_user("anonymous")
+    return repo.get_by_user(user_id)
 
 
 # ==================================================
