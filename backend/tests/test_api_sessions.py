@@ -26,17 +26,16 @@ def get_session_override():
         yield session
 
 
-app.dependency_overrides[get_session] = get_session_override
-
-
 @pytest.fixture(name="client")
 def client_fixture():
+    app.dependency_overrides[get_session] = get_session_override
     # Create the db tables for testing
     SQLModel.metadata.create_all(engine)
     with TestClient(app) as client:
         yield client
     # Clean up after tests
     SQLModel.metadata.drop_all(engine)
+    app.dependency_overrides.clear()
 
 
 def test_create_and_list_sessions(client: TestClient):
