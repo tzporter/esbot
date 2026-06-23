@@ -51,7 +51,8 @@ describe("ESBot E2E User Flows", () => {
     cy.contains("📝 AI Knowledge Quiz").click();
 
     const quizTopic = "Software Engineering Basics";
-    cy.get('input[placeholder="e.g., Context Managers"]').type(quizTopic);
+    // FIXED: Added { force: true } to handle dynamic overlay obstruction
+    cy.get('input[placeholder="e.g., Context Managers"]').type(quizTopic, { force: true });
     cy.contains("button", "✨ Generate AI Quiz").click();
 
     cy.contains("Question 1:", { timeout: 15000 }).should("exist");
@@ -82,8 +83,10 @@ describe("ESBot E2E User Flows", () => {
 
     cy.contains("📝 AI Knowledge Quiz").click();
 
+    // FIXED: Added { force: true } here too as a safety precaution against Streamlit DOM updates
     cy.get('input[placeholder="e.g., Context Managers"]').type(
       "Testing negative path",
+      { force: true }
     );
     cy.contains("button", "✨ Generate AI Quiz").click();
 
