@@ -146,3 +146,38 @@ class SessionRepository:
             })
 
         return saved_questions
+
+    def get_quizzes(self, session_id: int) -> List[dict]:
+        # Return all quizzes associated with a given session
+        session = self.db.get(UserSession, session_id)
+        if session is None:
+            raise ValueError(f"Session {session_id} not found")
+        
+        quizzes = []
+        # Sort quiz requests by creation time (descending or ascending)
+        # Assuming we want them in chronological order
+        for qr in sorted(session.quiz_requests, key=lambda q: q.created_at):
+            quiz_data = {
+                "id": qr.id,
+                "topic": qr.topic,
+                "difficulty": qr.difficulty,
+                "created_at": qr.created_at.isoformat(),
+                "questions": [
+                    {
+                        "id": qi.id,
+                        "question": qi.question_text,
+                        "answer": qi.correct_answer,
+                        "submitted_answer": {
+                            "id": qi.submitted_answer.id,
+                            "user_answer": qi.submitted_answer.user_answer,
+                            "evaluation": {
+                                "id": qi.submitted_answer.evaluation.id,
+                                "is_correct": qi.submitted_answer.evaluation.is_correct,
+                                "feedback": qi.submitted_answer.evaluation.feedback
+                            } if qi.submitted_answer.evaluation else None
+                        } if qi.submitted_answer else None
+                    } for qi in qr.quiz_items
+                ]
+            }
+            quizzes.append(quiz_data)
+        return quizzes

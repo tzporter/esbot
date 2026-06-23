@@ -1,8 +1,9 @@
 import streamlit as st
 import requests
+import os
 
 # --- CONFIGURATION ---
-BASE_URL = "http://127.0.0.1:8000/api/v1"
+BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
 
 st.set_page_config(page_title="ESBot Learning Assistant", page_icon="🎓", layout="wide")
 
@@ -25,6 +26,10 @@ def delete_session(session_id):
 def fetch_messages(session_id):
     response = requests.get(f"{BASE_URL}/sessions/{session_id}/messages")
     return response.json() if response.status_code == 200 else []
+
+def fetch_quizzes(session_id):
+    response = requests.get(f"{BASE_URL}/sessions/{session_id}/quizzes")
+    return response.json().get("quizzes", []) if response.status_code == 200 else []
 
 def send_chat_message(session_id, content):
     response = requests.post(f"{BASE_URL}/sessions/{session_id}/messages", json={"content": content})
@@ -107,12 +112,12 @@ else:
     # TAB 2: KNOWLEDGE QUIZ
     # ----------------------------------------------------
     with tab_quiz:
-        st.subheader("Test Your Knowledge")
+        st.subheader("Generate A Quiz")
         
-        if "current_quiz" not in st.session_state:
-            st.session_state.current_quiz = None
         if "evaluation_results" not in st.session_state:
             st.session_state.evaluation_results = {}
+
+        quizzes = fetch_quizzes(selected_id)
 
         with st.form("quiz_generation_panel"):
             quiz_topic = st.text_input("What topic would you like to be quizzed on?", placeholder="e.g., Context Managers", key="quiz_topic_input")
@@ -120,38 +125,68 @@ else:
                 with st.spinner("Synthesizing questions..."):
                     quiz_data = generate_quiz(selected_id, quiz_topic)
                     if quiz_data and "quiz" in quiz_data:
-                        st.session_state.current_quiz = quiz_data["quiz"]
                         st.session_state.evaluation_results = {} 
                         st.success("Quiz loaded!")
+                        st.rerun()
                     else:
                         st.error("Failed to generate quiz metadata.")
 
-        if st.session_state.current_quiz:
-            st.write(f"### Topic: {st.session_state.current_quiz.get('topic')}")
-            questions = st.session_state.current_quiz.get("questions", [])
+        if quizzes:
+            quiz_options = {q["id"]: f"{q['topic']} ({q['created_at'][:10]})" for q in quizzes}
+            st.subheader("Select a Quiz")
+            selected_quiz_id = st.selectbox(
+                label="quiz options",
+                options=list(quiz_options.keys()), 
+                format_func=lambda x: quiz_options[x],
+                index=len(quizzes)-1 # select the latest by default
+            )
             
-            for index, question in enumerate(questions):
-                q_id = question["id"]
-                q_text = question.get("question_text") or question.get("question") or "Missing Question Text"
+            selected_quiz = next((q for q in quizzes if q["id"] == selected_quiz_id), None)
+            
+            if selected_quiz:
+                st.write(f"### Topic: {selected_quiz.get('topic')}")
+                questions = selected_quiz.get("questions", [])
                 
-                st.markdown(f"--- \n **Question {index + 1}:** {q_text}")
-                user_ans = st.text_input("Your Answer:", key=f"ans_input_{q_id}")
-                
-                if st.button("Submit Answer", key=f"btn_sub_{q_id}"):
-                    if not user_ans.strip():
-                        st.warning("Please type an answer before submitting.")
-                    else:
-                        with st.spinner("Evaluating response..."):
-                            eval_res = submit_quiz_answer(q_id, user_ans)
-                            if eval_res:
-                                st.session_state.evaluation_results[q_id] = eval_res
-                
-                if q_id in st.session_state.evaluation_results:
-                    res = st.session_state.evaluation_results[q_id]
-                    if res.get("needs_clarification"):
-                        st.info(f"🤔 **Clarification Needed:** {res['clarification_question']}")
-                    else:
-                        if res.get("is_correct"):
-                            st.success(f"✅ **Correct!** \n\n {res['feedback']}")
+                for index, question in enumerate(questions):
+                    q_id = question["id"]
+                    q_text = question.get("question_text") or question.get("question") or "Missing Question Text"
+                    
+                    st.markdown(f"--- \n **Question {index + 1}:** {q_text}")
+                    
+                    # Sync backend answer and evaluation to frontend state
+                    default_ans = ""
+                    if question.get("submitted_answer"):
+                        default_ans = question["submitted_answer"]["user_answer"]
+                        if question["submitted_answer"].get("evaluation"):
+                            eval_data = question["submitted_answer"]["evaluation"]
+                            st.session_state.evaluation_results[q_id] = {
+                                "is_correct": eval_data["is_correct"],
+                                "feedback": eval_data["feedback"]
+                            }
+                            
+                    is_answered = q_id in st.session_state.evaluation_results
+                    
+                    user_ans = st.text_input("Your Answer:", value=default_ans, key=f"ans_input_{q_id}", disabled=is_answered)
+                    
+                    if not is_answered:
+                        if st.button("Submit Answer", key=f"btn_sub_{q_id}"):
+                            if not user_ans.strip():
+                                st.warning("Please type an answer before submitting.")
+                            else:
+                                with st.spinner("Evaluating response..."):
+                                    eval_res = submit_quiz_answer(q_id, user_ans)
+                                    if eval_res:
+                                        st.session_state.evaluation_results[q_id] = eval_res
+                                        st.rerun()
+                    
+                    if q_id in st.session_state.evaluation_results:
+                        res = st.session_state.evaluation_results[q_id]
+                        if res.get("needs_clarification"):
+                            st.info(f"🤔 **Clarification Needed:** {res['clarification_question']}")
                         else:
-                            st.error(f"❌ **Incorrect/Needs Improvement** \n\n {res['feedback']}")
+                            if res.get("is_correct"):
+                                st.success(f"✅ **Correct!** \n\n {res['feedback']}")
+                            else:
+                                st.error(f"❌ **Incorrect/Needs Improvement** \n\n {res['feedback']}")
+        else:
+            st.info("No quizzes generated yet. Generate one above!")

@@ -23,8 +23,12 @@ class AIService:
         #LLM_PROVIDER env var can be set to "mock" to enable mock mode, which returns hardcoded responses without calling the real API. This is useful for testing and development without incurring API costs or needing network access.
         self.mock_mode = os.getenv("LLM_PROVIDER", "real") == "mock"
 
+        if self.mock_mode:
+            return
 
-        self.api_key = os.getenv("GROQ_API_KEY", "mock_key")
+        self.api_key = os.getenv("GROQ_API_KEY", None)
+        if self.api_key is None:
+            raise ValueError("GROQ_API_KEY environment variable is not set")
         self.client = OpenAI(
             base_url="https://api.groq.com/openai/v1", api_key=self.api_key
         )
@@ -45,11 +49,12 @@ If a user requests a quiz, respond with the JSON:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},
                 ],
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
             )
             content = chat_completion.choices[0].message.content
             return content
-        except Exception:
+        except Exception as e:
+            print(f"Error calling Groq API: {e}", flush=True)
             raise ConnectionError("AI service is currently unavailable")
 
     def evaluate_answer(
@@ -93,7 +98,7 @@ If the answer is too ambiguous to evaluate, respond with:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
                 temperature=0.0,  # deterministic output for consistent JSON
             )
             raw = chat_completion.choices[0].message.content.strip()
@@ -145,7 +150,7 @@ If the answer is too ambiguous to evaluate, respond with:
                         "content": f"Generate a quiz on the topic: {topic}",
                     },
                 ],
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
             )
             raw_content = response.choices[0].message.content.strip()
 

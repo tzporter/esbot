@@ -158,7 +158,20 @@ def send_message(
 
 
 # ==================================================
-# 5. QUIZ REQUEST (AI ONLY, NO REPO QUIZ TABLE USAGE REQUIRED)
+# 5. GET SESSION QUIZZES
+# ==================================================
+
+@api_router.get("/sessions/{session_id}/quizzes")
+def get_session_quizzes(session_id: int, db: Session = Depends(get_session)):
+    repo = get_repo(db)
+    try:
+        quizzes = repo.get_quizzes(session_id)
+        return {"quizzes": quizzes}
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+# ==================================================
+# 6. QUIZ REQUEST (AI ONLY, NO REPO QUIZ TABLE USAGE REQUIRED)
 # ==================================================
 
 
