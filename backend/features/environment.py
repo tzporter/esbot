@@ -2,6 +2,7 @@ import os
 
 # Force a local SQLite database for Behave tests before any application code is imported
 os.environ["DATABASE_URL"] = "sqlite:///./behave_test.db"
+os.environ["LLM_PROVIDER"] = "mock"
 
 from database import engine
 from sqlmodel import SQLModel

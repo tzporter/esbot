@@ -2,6 +2,8 @@ import sys
 import os
 import pytest
 
+os.environ["LLM_PROVIDER"] = "mock"
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlmodel import SQLModel, Session, create_engine
