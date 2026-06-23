@@ -1,0 +1,70 @@
+name: E2E Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install and Run Backend
+        env:
+          LLM_PROVIDER: mock
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          echo "Backend started"
+
+      - name: Install and Run Frontend
+        run: |
+          cd frontend
+          pip install -r requirements.txt
+          streamlit run app.py --server.port 8501 --server.address 0.0.0.0 &
+          echo "Frontend started"
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Wait for services to be ready
+        run: |
+          # Wait for backend
+          npx wait-on http-get://127.0.0.1:8000/ --timeout 10000
+          # Wait for frontend
+          npx wait-on http-get://127.0.0.1:8501/ --timeout 10000
+
+      - name: Run Cypress E2E Tests
+        run: npx cypress run --config baseUrl=http://127.0.0.1:8501
+
+      - name: Upload Cypress Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots/
+          if-no-files-found: ignore
+
+      - name: Upload Cypress Videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/videos/
+          if-no-files-found: ignore
