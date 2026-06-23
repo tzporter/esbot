@@ -36,8 +36,7 @@ If any E2E test fails during the CI run, the workflow uses `actions/upload-artif
 
 ## Evidence of Green Run
 
-*[Insert screenshot or link to a successful GitHub Actions run here after pushing to the repository.]*
-
+A successful pipeline run is visible [here](https://github.com/tzporter/esbot/actions/runs/28044237066/job/83018076254).
 
 
 **This file was generated with the help of AI. All AI-generated content was thoroughly reviewed and edited by a human**

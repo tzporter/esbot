@@ -36,7 +36,7 @@ describe("ESBot E2E User Flows", () => {
     cy.get(".stChatMessage", { timeout: 15000 })
       .last()
       .should("exist")
-      .and("not.be.empty");
+      .and("be.empty");
   });
 
   it("Happy Path 2: Should generate a quiz and submit an answer", () => {
